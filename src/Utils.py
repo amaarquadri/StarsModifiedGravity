@@ -1,4 +1,5 @@
 import numpy as np
+from src.Constants import R_sun, state_normalize_vector
 
 
 def find_zeros(x, round_int=False, find_first=True):
@@ -23,3 +24,14 @@ def interpolate(x, index):
     Linearly interpolates data at fractional indices within the given array.
     """
     return np.interp(index, np.arange(len(x)), x)
+
+
+def print_state(radius, state, optical_depth):
+    normalized_state = state / state_normalize_vector
+    print("Radius: ", radius / R_sun,
+          ", Density: ", normalized_state[0],
+          ", Temperature: ", normalized_state[1],
+          ", Mass: ", normalized_state[2],
+          ", Luminosity: ", normalized_state[3],
+          ", Optical Depth: ", normalized_state[4],
+          ", Remaining Optical Depth: ", optical_depth)

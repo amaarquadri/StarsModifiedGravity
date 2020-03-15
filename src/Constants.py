@@ -1,5 +1,6 @@
 # noinspection PyUnresolvedReferences
 from numpy import pi  # Added so pi can be used in other files
+import numpy as np
 
 G = 6.67408e-11  # m^3/(kgs^2)
 sigma = 5.670374419e-8  # W/(m^2K^4)
@@ -22,3 +23,6 @@ epsilon_CNO_coefficient = 8.24e-26  # W/kg
 M_sun = 1.98847e30  # kg
 R_sun = 696_340_000  # m
 L_sun = 3.828e26  # W
+
+# Divide a state vector by this to get it in units of g/cm^3, K, M_sun, L_sun, 1
+state_normalize_vector = np.array([10 ** 3, 1, M_sun, L_sun, 1])
