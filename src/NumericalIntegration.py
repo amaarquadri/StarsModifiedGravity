@@ -1,7 +1,7 @@
-import numpy as np
 from src.Constants import *
-from src.Utils import find_zeros, interpolate
+from src.Utils import find_zeros, interpolate, print_state
 from src.StellarStructureEquations import rho_prime, T_prime, M_prime, L_prime, tau_prime, kappa, epsilon
+from scipy import integrate
 
 rho_index = 0
 T_index = 1
@@ -40,7 +40,7 @@ def get_state_derivative(r, state, return_kappa=False):
     tau_prime_value = tau_prime(rho, T, kappa_value=kappa_value)
 
     state_derivative = np.array([rho_prime_value, T_prime_value, M_prime_value, L_prime_value, tau_prime_value])
-    return state_derivative, kappa_value if return_kappa else state_derivative
+    return (state_derivative, kappa_value) if return_kappa else state_derivative
 
 
 def get_remaining_optical_depth(r, rho, T, M, L, kappa_value=None, rho_prime_value=None):
@@ -87,8 +87,9 @@ def trial_solution(rho_c, T_c, delta_r, r_0=None, optical_depth_threshold=1e-4):
 
     # Note even though the values for r=0 are not used as the first step,
     # they can still be included in the list of values
-    r_values = [0, r_0]
-    state_values = [np.array([rho_c, T_c, 0, 0, 0]), state]  # TODO: is initial condition for optical depth correct?
+    r_values = np.array([0, r_0])
+    # TODO: is initial condition for optical depth correct?
+    state_values = np.column_stack((np.array([rho_c, T_c, 0, 0, 0]), state))
 
     while state[M_index] < 10 ** 3 * M_sun:
         # TODO: upgrade to Runge-Kutta
@@ -97,15 +98,44 @@ def trial_solution(rho_c, T_c, delta_r, r_0=None, optical_depth_threshold=1e-4):
         r += delta_r
         state += state_derivative * delta_r
 
-        r_values += [r]
-        state_values += [state]
+        r_values = np.append(r_values, r)
+        state_values = np.column_stack((state_values, state))
 
-        if get_remaining_optical_depth(r, *state[:-1], kappa_value=kappa_value,
-                                       rho_prime_value=state_derivative[rho_index]) < optical_depth_threshold:
+        if len(r_values) % 100 == 0:
+            # only bother to check the exit condition every 100 steps
+            depth = get_remaining_optical_depth(r, *state[:-1], kappa_value=kappa_value,
+                                                rho_prime_value=state_derivative[rho_index])
+
+            if depth < optical_depth_threshold:
+                break
+
+    error = surface_L_error(r_values, state_values)
+    return r_values, state_values, error
+
+
+# noinspection PyUnresolvedReferences
+def trial_solution_rk45(rho_c, T_c, delta_r, r_0=None, optical_depth_threshold=1e-4):
+    if r_0 is None:
+        r_0 = delta_r / 10 ** 3
+
+    # Note even though the values for r=0 are not used as the first step,
+    # they can still be included in the list of values
+    r_values = np.array([0, r_0])
+    # TODO: is initial condition for optical depth correct?
+    state_values = np.column_stack((np.array([rho_c, T_c, 0, 0, 0]), get_initial_conditions(rho_c, T_c, r_0=r_0)))
+
+    while state_values[M_index, -1] < 10 ** 3 * M_sun:
+        result = integrate.solve_ivp(get_state_derivative, (r_values[-1], r_values[-1] + 0.5 * R_sun),
+                                     state_values[:, -1], max_step=delta_r)
+        r_values = np.concatenate((r_values, result.t[1:]))
+        state_values = np.column_stack((state_values, result.y[:, 1:]))
+
+        depth = get_remaining_optical_depth(r_values[-1], *state_values[:-1, -1])
+        print_state(r_values[-1], state_values[:, -1], depth)
+
+        # if remaining optical depth is too low, then division by 0 results in Nan
+        if np.isnan(depth) or depth < optical_depth_threshold:
             break
-
-    r_values = np.array(r_values)
-    state_values = np.column_stack(state_values)
 
     error = surface_L_error(r_values, state_values)
     return r_values, state_values, error
@@ -131,4 +161,5 @@ def solve_numerically(T_c, delta_r, error_threshold=1e-4):
         else:
             high_rho = rho_guess
 
+    # TODO: do we need to manually apply the boundary condition?
     return r_values, state_values
