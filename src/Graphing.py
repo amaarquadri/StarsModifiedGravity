@@ -1,4 +1,4 @@
-from src.Utils import find_zeros, interpolate
+from src.Utils import find_zeros_index, interpolate
 from src.NumericalIntegration import rho_index, T_index, M_index, L_index, tau_index
 from src.StellarStructureEquations import *
 import matplotlib.pyplot as plt
@@ -6,20 +6,22 @@ import matplotlib.pyplot as plt
 
 def graph_star(r_values, state_values, name="Sun"):
     tau_infinity = state_values[tau_index, -1]
-    surface_index = find_zeros(tau_infinity - state_values[tau_index] - 2 / 3)
+    surface_index = find_zeros_index(tau_infinity - state_values[tau_index] - 2 / 3)
 
     surface_r = interpolate(r_values, surface_index)
+    surface_state = interpolate(state_values, surface_index)
     rho_c = state_values[rho_index, 0]
     T_c = state_values[T_index, 0]
-    surface_M = interpolate(state_values[M_index, :], surface_index)
-    surface_L = interpolate(state_values[L_index, :], surface_index)
+    surface_M = surface_state[M_index]
+    surface_L = surface_state[L_index]
+    surface_T = surface_state[T_index]
 
     print("Central Density:", rho_c / 10 ** 3, r"$\frac{g}{cm^3}$")
     print("Central Temperature:", T_c / 10 ** 6, "million K")
     print("Radius:", surface_r / R_sun, r"$R_{sun}$")
     print("Mass:", state_values[M_index, -1] / M_sun, r"$M_{sun}$")
     print("Luminosity:", surface_L / L_sun, r"$L_{sun}$")
-    print("Surface Temperature:", state_values[T_index, -1], "K")
+    print("Surface Temperature:", surface_T, "K")
 
     surface_index = int(surface_index)
     r_graph_values = r_values[:surface_index] / surface_r
