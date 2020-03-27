@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.interpolate import interp1d
-from src.Constants import R_sun, state_normalize_vector
+from src.Units import R_sun, state_vector_units
 
 
 def find_zeros_index(x, round_int=False, find_first=True):
@@ -29,7 +29,7 @@ def interpolate(x, index):
     :param index: The (potentially fractional) index to interpolate at.
     :return: The interpolated value or (in the case where x is a matrix) array of values.
     """
-    if len(x.shape) == 0:
+    if len(x.shape) == 1:
         # if x is an array
         return np.interp(index, np.arange(len(x)), x)
     else:
@@ -38,7 +38,7 @@ def interpolate(x, index):
 
 
 def print_state(radius, state, optical_depth):
-    normalized_state = state / state_normalize_vector
+    normalized_state = state / state_vector_units
     print("Radius: ", radius / R_sun,
           ", Density: ", normalized_state[0],
           ", Temperature: ", normalized_state[1],

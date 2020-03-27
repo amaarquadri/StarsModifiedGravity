@@ -1,10 +1,12 @@
-from src.Constants import *
 import numpy as np
+from numpy import pi
+from src.Constants import G, a, c, gamma, m_p, m_e, h_bar, k_b, kappa_es_coefficient, kappa_ff_coefficient, \
+    kappa_H_minus_coefficient, epsilon_proton_proton_coefficient, epsilon_CNO_coefficient
 
 
-X_default = 0.712
-Y_default = 0.274
-Z_default = 0.015
+X_default = 0.7
+Z_default = 0.034070001061466126  # 0.014
+Y_default = 1 - Z_default - X_default  # 0.274
 
 
 def rho_prime(r, rho, T, M, L, T_prime_value=None):
@@ -19,8 +21,9 @@ def rho_prime(r, rho, T, M, L, T_prime_value=None):
 def T_prime(r, rho, T, M, L, kappa_value=None):
     if kappa_value is None:
         kappa_value = kappa(rho, T)
-    return -np.min([3 * kappa_value * rho * L / (16 * pi * a * c * T ** 3 * r ** 2),
-                    (1 - 1 / gamma) * T * G * M * rho / (P(rho, T) * r ** 2)])
+    radiative = 3 * kappa_value * rho * L / (16 * pi * a * c * T ** 3 * r ** 2)
+    convective = (1 - 1 / gamma) * T * G * M * rho / (P(rho, T) * r ** 2)
+    return -np.minimum(radiative, convective)
 
 
 def M_prime(r, rho):
@@ -83,12 +86,12 @@ def kappa_es(X=X_default):
     return kappa_es_coefficient * (X + 1)
 
 
-def kappa_ff(rho, T, Z=Z_default):
+def kappa_ff(rho, T, Z=0.034070001061466126):
     # TODO: shouldn't T be divided by some power of 10?
     return kappa_ff_coefficient * (Z + 0.0001) * (rho / 10 ** 3) ** 0.7 * T ** -3.5
 
 
-def kappa_H_minus(rho, T, Z=Z_default):
+def kappa_H_minus(rho, T, Z=0.0200000032081607):
     # TODO: shouldn't T be divided by some power of 10?
     return kappa_H_minus_coefficient * (Z / 0.02) * (rho / 10 ** 3) ** 0.5 * T ** 9
 
@@ -108,4 +111,5 @@ def epsilon_CNO(rho, T, X=X_default, X_CNO=None):
 
 
 def mu(X=X_default, Y=Y_default, Z=Z_default):
-    return (2 * X + 0.75 * Y + 0.5 * Z) ** -1
+    return 0.6166059684214849
+    # return (2 * X + 0.75 * Y + 0.5 * Z) ** -1

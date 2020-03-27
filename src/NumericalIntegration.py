@@ -1,7 +1,10 @@
-from src.Constants import *
+import numpy as np
+from numpy import pi
+from scipy import integrate
+from src.Units import M_sun, R_sun
+from src.Constants import sigma
 from src.Utils import find_zeros_index, interpolate, print_state
 from src.StellarStructureEquations import rho_prime, T_prime, M_prime, L_prime, tau_prime, kappa, epsilon
-from scipy import integrate
 
 """
 The numerical integration is all done in vector form, where the vector of interest is (rho, T, M, L, tau).
@@ -40,7 +43,7 @@ def get_state_derivative(r, state, return_kappa=False):
     :param return_kappa: If set to True, then the opacity will be returned as the second item of a tuple.
     :return: The elementwise derivative of the state vector, and optionally the optical depth as well.
     """
-    rho, T, M, L, tau = state
+    rho, T, M, L, _ = state
     kappa_value = kappa(rho, T)
 
     T_prime_value = T_prime(r, rho, T, M, L, kappa_value=kappa_value)
@@ -145,22 +148,27 @@ def trial_solution(rho_c, T_c, delta_r, r_0=None, optical_depth_threshold=1e-4):
     # TODO: is initial condition for optical depth correct?
     state_values = np.column_stack((np.array([rho_c, T_c, 0, 0, 0]), state))
 
+    count = 0
+    # only save the data a fixed number of times per solar radius
+    save_frequency = np.ceil(R_sun / delta_r / 1000)
     while state[M_index] < 10 ** 3 * M_sun:
-        state_derivative, kappa_value = get_state_derivative_rk4(r, state, return_kappa=True)
+        state_derivative, kappa_value = get_state_derivative_rk4(r, state, delta_r, return_kappa=True)
 
         r += delta_r
         state += state_derivative * delta_r
 
-        r_values = np.append(r_values, r)
-        state_values = np.column_stack((state_values, state))
+        if count % save_frequency == 0:
+            r_values = np.append(r_values, r)
+            state_values = np.column_stack((state_values, state))
 
-        if len(r_values) % 100 == 0:
-            # only bother to check the exit condition every 100 steps
+            # only bother to check the exit condition a fixed number of times per unit solar radius
             depth = get_remaining_optical_depth(r, state, kappa_value=kappa_value,
                                                 rho_prime_value=state_derivative[rho_index])
 
             if depth < optical_depth_threshold:
                 break
+
+        count += 1
 
     error = surface_L_error(r_values, state_values)
     return r_values, state_values, error
@@ -183,7 +191,7 @@ def trial_solution_rk45(rho_c, T_c, delta_r, r_0=None, optical_depth_threshold=1
         r_values = np.concatenate((r_values, result.t[1:]))
         state_values = np.column_stack((state_values, result.y[:, 1:]))
 
-        depth = get_remaining_optical_depth(r_values[-1], *state_values[:-1, -1])
+        depth = get_remaining_optical_depth(r_values[-1], state_values[:, -1])
         print_state(r_values[-1], state_values[:, -1], depth)
 
         # if remaining optical depth is too low, then division by 0 results in Nan
