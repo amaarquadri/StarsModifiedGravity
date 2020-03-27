@@ -34,7 +34,6 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     surface_index = int(surface_index)
     r_graph_values = r_values[:surface_index] / surface_r
 
-    # TODO: change colours to match project description
     plt.plot(r_graph_values, state_values[rho_index, :surface_index] / rho_c, label=r"$\rho$", color="black")
     plt.plot(r_graph_values, state_values[T_index, :surface_index] / T_c, label="T", color="red")
     plt.plot(r_graph_values, state_values[M_index, :surface_index] / surface_M, label="M", color="green")
