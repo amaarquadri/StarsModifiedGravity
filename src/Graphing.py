@@ -39,7 +39,7 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.plot(r_graph_values, state_values[M_index, :surface_index] / surface_M, label="M", color="green")
     plt.plot(r_graph_values, state_values[L_index, :surface_index] / surface_L, label="L", color="blue")
     if reference_data is not None:
-        r_ref_values = reference_data[ex_r_index, :] / reference_data[ex_r_index, -1]
+        r_ref_values = reference_data[ex_r_index, :] / surface_r
         plt.plot(r_ref_values, reference_data[ex_rho_index, :] / reference_data[ex_rho_index, 0],
                  label=r"$\rho_{ref}$", color="black", linestyle='dashed')
         plt.plot(r_ref_values, reference_data[ex_T_index, :] / reference_data[ex_T_index, 0],
@@ -68,7 +68,7 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.plot(r_graph_values, P_gas_values / P_max, label=r"$P_{gas}$", color="green")
     plt.plot(r_graph_values, P_photon_values / P_max, label=r"$P_{photon}$", color="blue")
     if reference_data is not None:
-        r_ref_values = reference_data[ex_r_index, :] / reference_data[ex_r_index, -1]
+        r_ref_values = reference_data[ex_r_index, :] / surface_r
         P_ref_max = reference_data[ex_P_index, 0]
         plt.plot(r_ref_values, reference_data[ex_P_index, :] / P_ref_max,
                  label=r"$P_{total, ref}$", color="black", linestyle='dashed')
@@ -96,7 +96,7 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.plot(r_graph_values, np.log10(kappa_ff_values / (cm ** 2 / g)), label=r"$\kappa_{ff}$", color="green")
     plt.plot(r_graph_values, np.log10(kappa_H_minus_values / (cm ** 2 / g)), label=r"$\kappa_{H-}$", color="red")
     if reference_data is not None:
-        r_ref_values = reference_data[ex_r_index, :] / reference_data[ex_r_index, -1]
+        r_ref_values = reference_data[ex_r_index, :] / surface_r
         plt.plot(r_ref_values, np.log10(reference_data[ex_kappa_index, :] / (cm ** 2 / g)),
                  label=r"$\kappa_{total, ref}$", color="black", linestyle='dashed')
         plt.plot(r_ref_values, np.log10(reference_data[ex_kappa_es_index, :] / (cm ** 2 / g)),
@@ -124,7 +124,7 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
              label=r"$\frac{L_{proton-proton}}{dr}$", color="red")
     plt.plot(r_graph_values, L_CNO_prime_values / surface_L * surface_r, label=r"$\frac{L_{CNO}}{dr}$", color="blue")
     if reference_data is not None:
-        r_ref_values = reference_data[ex_r_index, :] / reference_data[ex_r_index, -1]
+        r_ref_values = reference_data[ex_r_index, :] / surface_r
         ref_L_surface = reference_data[ex_L_index, -1]
         ref_r_surface = reference_data[ex_r_index, -1]
         plt.plot(r_ref_values, reference_data[ex_L_prime_index, :] / ref_L_surface * ref_r_surface,
@@ -147,8 +147,7 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     # Omit last r_graph_value since taking first difference decreases array size by 1
     plt.plot(r_graph_values[:-1], dlogP_dlogT_values, label="calculated", color="black")
     if reference_data is not None:
-        plt.plot(reference_data[ex_r_index, :] / reference_data[ex_r_index, -1],
-                 reference_data[ex_dlog_P_by_dlog_T_index, :],
+        plt.plot(reference_data[ex_r_index, :] / surface_r, reference_data[ex_dlog_P_by_dlog_T_index, :],
                  label="ref", color="black", linestyle="dashed")
     plt.xlim(0, 1)
     plt.xlabel(r"$r/R_{star}$")
