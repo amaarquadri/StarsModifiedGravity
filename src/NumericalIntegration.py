@@ -165,7 +165,7 @@ def trial_solution(rho_c, T_c, delta_r, r_0=None, optical_depth_threshold=1e-4):
             depth = get_remaining_optical_depth(r, state, kappa_value=kappa_value,
                                                 rho_prime_value=state_derivative[rho_index])
 
-            if depth < optical_depth_threshold:
+            if depth < optical_depth_threshold or r > 0.863869661 * R_sun:  # hardcoded end condition for debugging
                 break
 
         count += 1
