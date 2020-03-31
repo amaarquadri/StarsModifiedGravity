@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from src.Units import K, g, cm, million_K, M_sun, L_sun, R_sun
 from src.Utils import find_zeros_index, interpolate
 from src.StellarStructureEquations import L_proton_proton_prime, L_CNO_prime, P_degeneracy, P_gas, P_photon,\
-    kappa, kappa_es, kappa_ff, kappa_H_minus
+    kappa, kappa_es, kappa_ff, kappa_H_minus, is_convective
 from src.NumericalIntegration import rho_index, T_index, M_index, L_index, tau_index
 from src.ExampleStar import ex_r_index, ex_rho_index, ex_T_index, ex_M_index, ex_L_index, \
     ex_P_index, ex_P_degeneracy_index, ex_P_gas_index, ex_P_photon_index, \
@@ -34,10 +34,21 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     surface_index = int(surface_index)
     r_graph_values = r_values[:surface_index] / surface_r
 
+    # Compute convective regions
+    kappa_total_values = kappa(state_values[rho_index, :surface_index], state_values[T_index, :surface_index])
+    convective_regions = get_convective_regions(r_values[:surface_index], state_values[:, :surface_index],
+                                                surface_r, kappa_total_values)
+
+    def mark_convective():
+        for a, b in convective_regions:
+            plt.axvspan(a, b, facecolor='gray', alpha=0.5)
+
+
     plt.plot(r_graph_values, state_values[rho_index, :surface_index] / rho_c, label=r"$\rho$", color="black")
     plt.plot(r_graph_values, state_values[T_index, :surface_index] / T_c, label="T", color="red")
     plt.plot(r_graph_values, state_values[M_index, :surface_index] / surface_M, label="M", color="green")
     plt.plot(r_graph_values, state_values[L_index, :surface_index] / surface_L, label="L", color="blue")
+    mark_convective()
     if reference_data is not None:
         r_ref_values = reference_data[ex_r_index, :] / surface_r
         plt.plot(r_ref_values, reference_data[ex_rho_index, :] / reference_data[ex_rho_index, 0],
@@ -67,6 +78,7 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.plot(r_graph_values, P_degeneracy_values / P_max, label=r"$P_{deg}$", color="red")
     plt.plot(r_graph_values, P_gas_values / P_max, label=r"$P_{gas}$", color="green")
     plt.plot(r_graph_values, P_photon_values / P_max, label=r"$P_{photon}$", color="blue")
+    mark_convective()
     if reference_data is not None:
         r_ref_values = reference_data[ex_r_index, :] / surface_r
         P_ref_max = reference_data[ex_P_index, 0]
@@ -90,11 +102,11 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     kappa_es_values = kappa_es() * np.ones(len(r_graph_values))
     kappa_ff_values = kappa_ff(state_values[rho_index, :surface_index], state_values[T_index, :surface_index])
     kappa_H_minus_values = kappa_H_minus(state_values[rho_index, :surface_index], state_values[T_index, :surface_index])
-    kappa_total_values = kappa(state_values[rho_index, :surface_index], state_values[T_index, :surface_index])
     plt.plot(r_graph_values, np.log10(kappa_total_values / (cm ** 2 / g)), label=r"$\kappa_{total}$", color="black")
     plt.plot(r_graph_values, np.log10(kappa_es_values / (cm ** 2 / g)), label=r"$\kappa_{es}$", color="blue")
     plt.plot(r_graph_values, np.log10(kappa_ff_values / (cm ** 2 / g)), label=r"$\kappa_{ff}$", color="green")
     plt.plot(r_graph_values, np.log10(kappa_H_minus_values / (cm ** 2 / g)), label=r"$\kappa_{H-}$", color="red")
+    mark_convective()
     if reference_data is not None:
         r_ref_values = reference_data[ex_r_index, :] / surface_r
         plt.plot(r_ref_values, np.log10(reference_data[ex_kappa_index, :] / (cm ** 2 / g)),
@@ -123,6 +135,7 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.plot(r_graph_values, L_proton_proton_prime_values / surface_L * surface_r,
              label=r"$\frac{L_{proton-proton}}{dr}$", color="red")
     plt.plot(r_graph_values, L_CNO_prime_values / surface_L * surface_r, label=r"$\frac{L_{CNO}}{dr}$", color="blue")
+    mark_convective()
     if reference_data is not None:
         r_ref_values = reference_data[ex_r_index, :] / surface_r
         ref_L_surface = reference_data[ex_L_index, -1]
@@ -146,6 +159,7 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     dlogP_dlogT_values = np.diff(log_P_values) / np.diff(log_T_values)
     # Omit last r_graph_value since taking first difference decreases array size by 1
     plt.plot(r_graph_values[:-1], dlogP_dlogT_values, label="calculated", color="black")
+    mark_convective()
     if reference_data is not None:
         plt.plot(reference_data[ex_r_index, :] / surface_r, reference_data[ex_dlog_P_by_dlog_T_index, :],
                  label="ref", color="black", linestyle="dashed")
@@ -155,3 +169,21 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.title(r"$\frac{dlogP}{dlogT}$ Versus Radius Fraction")
     plt.savefig("../Graphs/" + name + "_dlogP_dlogT.png")
     plt.clf()
+
+
+def get_convective_regions(r_values, state_values, surface_r, kappa_values=None):
+    kappa_total_values = kappa(state_values[rho_index, :], state_values[T_index, :])
+    convective = is_convective(r_values[:], state_values[rho_index, :],
+                               state_values[T_index, :], state_values[M_index, :],
+                               state_values[L_index, :], kappa_value=kappa_total_values)
+    indices = iter(np.concatenate(([0], np.argwhere(np.diff(convective))[:, 0], [len(convective) - 1])))
+    if not convective[0]:
+        next(indices)  # remove first
+    pairs = []
+    while True:
+        try:
+            a = next(indices)
+            b = next(indices)
+            pairs.append((r_values[a] / surface_r, r_values[b] / surface_r))
+        except StopIteration:
+            return pairs
