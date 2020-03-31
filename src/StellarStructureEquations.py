@@ -5,7 +5,7 @@ from src.Constants import G, a, c, gamma, m_p, m_e, h_bar, k_b, kappa_es_coeffic
 
 
 X_default = 0.7
-Z_default = 0.034070001061466126  # 0.014
+Z_default = 0.031  # 0.034070001061466126  # 0.014
 Y_default = 1 - Z_default - X_default  # 0.274
 
 
@@ -108,12 +108,12 @@ def kappa_es(X=X_default):
     return kappa_es_coefficient * (X + 1)
 
 
-def kappa_ff(rho, T, Z=0.034070001061466126):
+def kappa_ff(rho, T, Z=Z_default):
     # TODO: shouldn't T be divided by some power of 10?
     return kappa_ff_coefficient * (Z + 0.0001) * (rho / 10 ** 3) ** 0.7 * T ** -3.5
 
 
-def kappa_H_minus(rho, T, Z=0.0200000032081607):
+def kappa_H_minus(rho, T, Z=Z_default):
     # TODO: shouldn't T be divided by some power of 10?
     return kappa_H_minus_coefficient * (Z / 0.02) * (rho / 10 ** 3) ** 0.5 * T ** 9
 
@@ -133,5 +133,4 @@ def epsilon_CNO(rho, T, X=X_default, X_CNO=None):
 
 
 def mu(X=X_default, Y=Y_default, Z=Z_default):
-    return 0.6166059684214849
-    # return (2 * X + 0.75 * Y + 0.5 * Z) ** -1
+    return (2 * X + 0.75 * Y + 0.5 * Z) ** -1

@@ -87,7 +87,7 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.savefig("../Graphs/" + name + "_pressure.png")
     plt.clf()
 
-    kappa_es_values = kappa_es(state_values[rho_index, :surface_index])
+    kappa_es_values = kappa_es() * np.ones(len(r_graph_values))
     kappa_ff_values = kappa_ff(state_values[rho_index, :surface_index], state_values[T_index, :surface_index])
     kappa_H_minus_values = kappa_H_minus(state_values[rho_index, :surface_index], state_values[T_index, :surface_index])
     kappa_total_values = kappa(state_values[rho_index, :surface_index], state_values[T_index, :surface_index])
