@@ -23,29 +23,23 @@ def T_prime(r, rho, T, M, L, kappa_value=None):
         kappa_value = kappa(rho, T)
     radiative = 3 * kappa_value * rho * L / (16 * pi * a * c * T ** 3 * r ** 2)
     convective = (1 - 1 / gamma) * T * G * M * rho / (P(rho, T) * r ** 2)
-    # if radiative < convective:
-    #     print("rad")
-    # else:
-    #     print("conv")
     return -np.minimum(radiative, convective)
 
 
 def T_prime_radiative(r, rho, T, L, kappa_value=None):
-    """
-    For debugging
-    """
     if kappa_value is None:
         kappa_value = kappa(rho, T)
     return -3 * kappa_value * rho * L / (16 * pi * a * c * T ** 3 * r ** 2)
 
 
-def T_prime_convective(r, rho, T, M, L, kappa_value=None):
-    """
-    For debugging
-    """
+def T_prime_convective(r, rho, T, M):
+    return -(1 - 1 / gamma) * T * G * M * rho / (P(rho, T) * r ** 2)
+
+
+def is_convective(r, rho, T, M, L, kappa_value=None):
     if kappa_value is None:
         kappa_value = kappa(rho, T)
-    return -(1 - 1 / gamma) * T * G * M * rho / (P(rho, T) * r ** 2)
+    return T_prime_convective(r, rho, T, M) > T_prime_radiative(r, rho, T, L, kappa_value=kappa_value)
 
 
 def M_prime(r, rho):

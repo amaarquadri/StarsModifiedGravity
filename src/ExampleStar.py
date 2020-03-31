@@ -19,8 +19,7 @@ def test_stellar_structure_equations(file_name="../Example Stars/lowmass_star.tx
     data = np.loadtxt(file_name).T * example_star_units[:, None]
 
     diff = T_prime_radiative(data[ex_r_index, :], data[ex_rho_index, :], data[ex_T_index, :], data[ex_L_index, :]) - \
-        T_prime_convective(data[ex_r_index, :], data[ex_rho_index, :], data[ex_T_index, :],
-                           data[ex_M_index, :], data[ex_L_index, :])
+        T_prime_convective(data[ex_r_index, :], data[ex_rho_index, :], data[ex_T_index, :], data[ex_M_index, :])
 
     rho_prime_actual = rho_prime(data[ex_r_index, :], data[ex_rho_index, :], data[ex_T_index, :],
                                  data[ex_M_index, :], data[ex_L_index, :])
