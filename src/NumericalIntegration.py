@@ -1,7 +1,7 @@
 import numpy as np
 from numpy import pi
-from scipy import integrate
-from src.Units import M_sun, R_sun
+from scipy import integrate, optimize
+from src.Units import m, g, cm, M_sun, R_sun
 from src.Constants import sigma
 from src.Utils import find_zeros_index, interpolate, print_state
 from src.StellarStructureEquations import rho_prime, T_prime, M_prime, L_prime, tau_prime, kappa, epsilon
@@ -18,7 +18,7 @@ The indices are referenced using the following variables for readability.
 rho_index, T_index, M_index, L_index, tau_index = 0, 1, 2, 3, 4
 
 
-def get_initial_conditions(rho_c, T_c, r_0=1):
+def get_initial_conditions(rho_c, T_c, r_0=1 * m):
     """
     Calculates the initial state vector.
 
@@ -175,52 +175,44 @@ def trial_solution(rho_c, T_c, delta_r, r_0=None, optical_depth_threshold=1e-4):
 
 
 # noinspection PyUnresolvedReferences
-def trial_solution_rk45(rho_c, T_c, delta_r, r_0=None, optical_depth_threshold=1e-4):
-    if r_0 is None:
-        r_0 = delta_r / 10 ** 3
+def trial_solution_rk45(rho_c, T_c, r_0=100 * m,
+                        return_star=False, optical_depth_threshold=1e-4, mass_threshold=1000 * M_sun):
+    """
+    Integrates the state of the star from r_0 until the estimated optical depth is below the given threshold.
+    The array of radius values and the state matrix are returned along with the fractional surface luminosity error.
 
-    # Note even though the values for r=0 are not used as the first step,
-    # they can still be included in the list of values
-    r_values = np.array([0, r_0])
-    # TODO: is initial condition for optical depth correct?
-    state_values = np.column_stack((np.array([rho_c, T_c, 0, 0, 0]), get_initial_conditions(rho_c, T_c, r_0=r_0)))
+    :param rho_c: The central density.
+    :param T_c: The central temperature.
+    :param r_0: The starting value of the radius. Must be greater than 0 to prevent numerical instabilities.
+                Defaults to 100m.
+    :param return_star: If True, then the radius values and state matrix will be returned alongside
+                        the fractional surface luminosity error.
+    :param optical_depth_threshold: The value below which the estimated remaining optical depth
+                                    must drop for the integration to terminate.
+    :param mass_threshold: If the mass of the star increases beyond this value, then integration will be halted.
+    :returns: The fractional surface luminosity error, and optionally the array of radius values and the state matrix
+    """
+    # Event based end condition
+    def halt_integration(r, state):
+        if state[M_index] > mass_threshold:
+            return -1
+        return get_remaining_optical_depth(r, state) - optical_depth_threshold
+    halt_integration.terminal = True
 
-    while state_values[M_index, -1] < 10 ** 3 * M_sun:
-        result = integrate.solve_ivp(get_state_derivative, (r_values[-1], r_values[-1] + 0.5 * R_sun),
-                                     state_values[:, -1], max_step=delta_r)
-        r_values = np.concatenate((r_values, result.t[1:]))
-        state_values = np.column_stack((state_values, result.y[:, 1:]))
+    # Ending radius is infinity, integration will only be halted via the halt_integration event
+    # Not sure what good values for atol and rtol are, but these seem to work well
+    result = integrate.solve_ivp(get_state_derivative, (r_0, np.inf), get_initial_conditions(rho_c, T_c, r_0=r_0),
+                                 events=halt_integration, atol=1e-12, rtol=1e-9)
+    r_values = result.t
+    state_matrix = result.y
 
-        depth = get_remaining_optical_depth(r_values[-1], state_values[:, -1])
-        print_state(r_values[-1], state_values[:, -1], depth)
-
-        # if remaining optical depth is too low, then division by 0 results in Nan
-        if np.isnan(depth) or depth < optical_depth_threshold:
-            break
-
-    error = surface_L_error(r_values, state_values)
-    return r_values, state_values, error
+    error = surface_L_error(r_values, state_matrix)
+    return (r_values, state_matrix, error) if return_star else error
 
 
-def solve_numerically(T_c, delta_r, error_threshold=1e-4):
-    low_rho = 0.3
-    high_rho = 500
-
-    low_error = trial_solution(low_rho, T_c, delta_r)[-1]
-
-    r_values = None
-    state_values = None
-
-    while high_rho - low_rho > error_threshold:
-        # TODO: run 4 computations in parallel (i.e. cut search space by a factor of 5 each time instead of 2)
-        rho_guess = (low_rho + high_rho) / 2
-        r_values, state_values, error = trial_solution(rho_guess, T_c, delta_r)
-
-        if np.sign(error) == np.sign(low_error):
-            low_rho = rho_guess
-            low_error = error
-        else:
-            high_rho = rho_guess
-
-    # TODO: do we need to manually apply the boundary condition?
-    return r_values, state_values
+def solve_numerically(T_c, rho_c_guess=100 * g / cm ** 3, error_threshold=1e-6):
+    result = optimize.root_scalar(trial_solution_rk45, args=(T_c,), method='bisect',
+                                  bracket=(0.3 * g / cm ** 3, 500 * g / cm ** 3), x0=rho_c_guess, xtol=error_threshold)
+    rho_c = result.root
+    r_values, state_matrix, error = trial_solution_rk45(rho_c, T_c, return_star=True)
+    return r_values, state_matrix
