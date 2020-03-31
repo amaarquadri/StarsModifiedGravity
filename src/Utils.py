@@ -37,7 +37,7 @@ def interpolate(x, index):
         return interp1d(np.arange(x.shape[1]), x)(index)
 
 
-def print_state(radius, state, optical_depth):
+def print_state(radius, state, remaining_optical_depth=None):
     normalized_state = state / state_vector_units
     print("Radius: ", radius / R_sun,
           ", Density: ", normalized_state[0],
@@ -45,4 +45,4 @@ def print_state(radius, state, optical_depth):
           ", Mass: ", normalized_state[2],
           ", Luminosity: ", normalized_state[3],
           ", Optical Depth: ", normalized_state[4],
-          ", Remaining Optical Depth: ", optical_depth)
+          ", Remaining Optical Depth: ", remaining_optical_depth if remaining_optical_depth is not None else 'Unknown')
