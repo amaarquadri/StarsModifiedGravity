@@ -9,16 +9,14 @@ R_index, rho_c_index, T_c_index, M_surface_index, L_surface_index, tau_surface_i
 
 def predict_rho_c(T_c, T_c_values, rho_c_values):
     """
-    Predict the central density based on a power law regression model of the given data.
-    The power law regression model is guaranteed to go through the last data point, which ensures that the estimate will
-    not be too far off. This extra information is possible since we are computing a continuous function
-    instead of random data.
+    Predict the central density based on the given data.
 
     :param T_c: The central temperature to predict the central density for.
     :param T_c_values: The list of computed central temperature values.
     :param rho_c_values: The corresponding list of computed central density values.
-    :return: The predicted central density, and the r squared value (coefficient of determination).
+    :return: The predicted central density.
     """
+    # If there are less than 2 data points, then just do a basic prediction
     if len(T_c_values) == 0:
         return 100 * g / cm ** 3
     elif len(rho_c_values) == 1:
@@ -40,10 +38,17 @@ def predict_rho_c(T_c, T_c_values, rho_c_values):
     m = (np.log(rho_c_values[-1]) - np.log(rho_c_values[-2])) / (np.log(T_c_values[-1]) - np.log(T_c_values[-2]))
     rho_c_guess = np.exp(m * (np.log(T_c) - np.log(T_c_values[-1])) + np.log(rho_c_values[-1]))
 
+    # Ensure rho_c_guess is positive
     return rho_c_guess if rho_c_guess > 0 else rho_c_values[-1] / 2
 
 
 def calculate_stellar_data(T_c_values):
+    """
+    Calculates aggregated stellar data using
+
+    :param T_c_values: The list of central Temperatures to calculate stellar data for.
+    :return:
+    """
     stellar_data = None
     for i, T_c in enumerate(T_c_values):
         print(i)
@@ -60,7 +65,7 @@ def calculate_stellar_data(T_c_values):
     return stellar_data
 
 
-def generate_stars(T_c_values=np.linspace(1 * million_K, 50 * million_K, 100), file_name=None, threads=4):
+def generate_stars(T_c_values=np.linspace(0.01 * million_K, 36 * million_K, 150), file_name=None, threads=4):
     if threads > 1:
         T_c_values_list = [T_c_values[i * len(T_c_values) // threads:(i + 1) * len(T_c_values) // threads]
                            for i in range(threads)]
