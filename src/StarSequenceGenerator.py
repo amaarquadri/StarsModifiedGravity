@@ -1,10 +1,10 @@
 import numpy as np
 from multiprocessing import Pool
 from src.FileIO import save_stellar_data
-from src.NumericalIntegration import solve_bvp, rho_index
+from src.NumericalIntegration import solve_bvp, rho_index, T_index, M_index, L_index, tau_index
 from src.Units import g, cm, million_K
 
-R_index, rho_c_index, T_c_index, M_surface_index, L_surface_index, tau_surface_index = np.arange(6)
+R_index, rho_c_index, T_c_index, M_surface_index, L_surface_index, tau_surface_index, T_surface_index = np.arange(7)
 
 
 def predict_rho_c(T_c, T_c_values, rho_c_values):
@@ -42,6 +42,11 @@ def predict_rho_c(T_c, T_c_values, rho_c_values):
     return rho_c_guess if rho_c_guess > 0 else rho_c_values[-1] / 2
 
 
+def get_aggregated_data(r_values, state_values):
+    return np.array([r_values[-1], state_values[rho_index, 0], state_values[T_index, 0], state_values[M_index, -1],
+                     state_values[L_index, -1], state_values[tau_index, -1], state_values[T_index, -1]])
+
+
 def calculate_stellar_data(T_c_values):
     """
     Calculates aggregated stellar data using
@@ -54,13 +59,12 @@ def calculate_stellar_data(T_c_values):
         print(i)
         if i == 0:
             r_values, state_values = solve_bvp(T_c)
-            stellar_data = np.concatenate(([r_values[-1]], state_values[:2, 0], state_values[2:, -1]))[:, np.newaxis]
+            stellar_data = get_aggregated_data(r_values, state_values)[:, np.newaxis]
             continue
 
         rho_c_guess = predict_rho_c(T_c, stellar_data[T_c_index, :], stellar_data[rho_c_index, :])
         r_values, state_values = solve_bvp(T_c, rho_c_guess=rho_c_guess)
-        stellar_data = np.column_stack((stellar_data,
-                                        np.concatenate(([r_values[-1]], state_values[:2, 0], state_values[2:, -1]))))
+        stellar_data = np.column_stack((stellar_data, get_aggregated_data(r_values, state_values)))
         print("Expected:", rho_c_guess, ", Actual:", state_values[rho_index, 0])
     return stellar_data
 
