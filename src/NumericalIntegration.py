@@ -246,9 +246,10 @@ def solve_bvp(T_c,
             bias_high = False
         else:
             print("Retrying with larger rho_c interval for", T_c)
-            return solve_bvp(T_c, rho_c_guess, confidence=0.99, rho_c_min=rho_c_min, rho_c_max=rho_c_max,
+            return solve_bvp(T_c, rho_c_guess, confidence=0.99,
+                             rho_c_min=rho_c_min / 1000, rho_c_max=1000 * rho_c_max,
                              high_accuracy_threshold=high_accuracy_threshold, rho_c_tol=rho_c_tol,
-                             max_rtol=1000 * max_rtol, min_rtol=min_rtol / 1000,
+                             max_rtol=max_rtol, min_rtol=min_rtol,
                              max_optical_depth_threshold=max_optical_depth_threshold,
                              min_optical_depth_threshold=min_optical_depth_threshold)
 
