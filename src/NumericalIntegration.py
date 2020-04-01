@@ -1,9 +1,9 @@
 import numpy as np
 from numpy import pi
-from scipy import integrate, optimize
-from src.Units import m, g, cm, M_sun, R_sun
+from scipy import integrate
+from src.Units import m, kg, g, cm, M_sun, R_sun
 from src.Constants import sigma
-from src.Utils import find_zeros_index, interpolate, print_state
+from src.Utils import find_zeros_index, interpolate
 from src.StellarStructureEquations import rho_prime, T_prime, M_prime, L_prime, tau_prime, kappa, epsilon
 
 """
@@ -56,32 +56,6 @@ def get_state_derivative(r, state, return_kappa=False):
     return (state_derivative, kappa_value) if return_kappa else state_derivative
 
 
-def get_state_derivative_rk4(r, state, delta_r, return_kappa=False):
-    """
-    Estimates the elementwise derivative of the state vector using the 4th order Runge-Kutta method.
-    This will provide a more accurate estimate of the average derivative of the state vector between r and r + delta_r.
-
-    :param r: The current radius.
-    :param state: The state vector at the given radius.
-    :param delta_r: The size of the step in the radius.
-    :param return_kappa: If set to True, then the opacity will be returned as the second item of a tuple.
-    :return: The elementwise derivative of the state vector, and optionally the optical depth as well.
-    """
-    state_prime_0, kappa_0 = get_state_derivative(r, state, return_kappa=True)
-    state_prime_1, kappa_1 = get_state_derivative(r + delta_r / 2, state + state_prime_0 * delta_r / 2,
-                                                  return_kappa=True)
-    state_prime_2, kappa_2 = get_state_derivative(r + delta_r / 2, state + state_prime_1 * delta_r / 2,
-                                                  return_kappa=True)
-    state_prime_3, kappa_3 = get_state_derivative(r + delta_r, state + state_prime_2 * delta_r, return_kappa=True)
-
-    state_prime_rk4 = (state_prime_0 + 2 * state_prime_1 + 2 * state_prime_2 + state_prime_3) / 6
-    if not return_kappa:
-        return state_prime_rk4
-
-    kappa_rk4 = (kappa_0 + 2 * kappa_1 + 2 * kappa_2 + kappa_3) / 6
-    return state_prime_rk4, kappa_rk4
-
-
 def get_remaining_optical_depth(r, state, kappa_value=None, rho_prime_value=None):
     """
     Calculates an estimate of the remaining optical depth from the current radius to infinity.
@@ -122,7 +96,225 @@ def surface_L_error(r_values, state_values):
     return (surface_state[L_index] - expected_surface_L) / np.sqrt(surface_state[L_index] * expected_surface_L)
 
 
-def trial_solution(rho_c, T_c, delta_r, r_0=None, optical_depth_threshold=1e-4):
+def truncate_star(r_values, state_values):
+    """
+    Truncates the given stellar data at the surface of the star. Additionally, this adds a final data point for the
+    surface of the star, where the temperature is manually set to satisfy the boundary condition.
+
+    :param r_values:
+    :param state_values:
+    :return: The truncated r_values and state_values.
+    """
+    tau_infinity = state_values[tau_index, -1]
+    surface_index = find_zeros_index(tau_infinity - state_values[tau_index, :] - 2 / 3)
+
+    surface_r = interpolate(r_values, surface_index)
+    surface_state = interpolate(state_values, surface_index)
+
+    # manually set surface temperature to satisfy boundary condition
+    surface_state[T_index] = (surface_state[L_index] / (4 * pi * surface_r ** 2 * sigma)) ** (1 / 4)
+
+    surface_index = int(surface_index)
+    r_values = np.append(r_values[:surface_index], surface_r)
+    state_values = np.column_stack((state_values[:, :surface_index], surface_state))
+
+    return r_values, state_values
+
+
+# noinspection PyUnresolvedReferences
+def trial_solution(rho_c, T_c, r_0=100 * m, rtol=1e-9, atol=None,
+                   return_star=False, optical_depth_threshold=1e-4, mass_threshold=1000 * M_sun):
+    """
+    Integrates the state of the star from r_0 until the estimated optical depth is below the given threshold.
+    The array of radius values and the state matrix are returned along with the fractional surface luminosity error.
+
+    :param rho_c: The central density.
+    :param T_c: The central temperature.
+    :param r_0: The starting value of the radius. Must be greater than 0 to prevent numerical instabilities.
+                Defaults to 100m.
+    :param return_star: If True, then the radius values and state matrix will be returned alongside
+                        the fractional surface luminosity error.
+    :param rtol: The required relative accuracy during integration.
+    :param atol: The required absolute accuracy during integration. Defaults to rtol / 1000.
+    :param optical_depth_threshold: The value below which the estimated remaining optical depth
+                                    must drop for the integration to terminate.
+    :param mass_threshold: If the mass of the star increases beyond this value, then integration will be halted.
+                           Defaults to 1000 solar masses.
+    :returns: The fractional surface luminosity error, and optionally the array of radius values and the state matrix
+    """
+    if atol is None:
+        atol = rtol / 1000
+
+    # Event based end condition
+    def halt_integration(r, state):
+        if state[M_index] > mass_threshold:
+            return -1
+        return get_remaining_optical_depth(r, state) - optical_depth_threshold
+    halt_integration.terminal = True
+
+    # Ending radius is infinity, integration will only be halted via the halt_integration event
+    # Not sure what good values for atol and rtol are, but these seem to work well
+    result = integrate.solve_ivp(get_state_derivative, (r_0, np.inf), get_initial_conditions(rho_c, T_c, r_0=r_0),
+                                 events=halt_integration, atol=atol, rtol=rtol)
+    r_values = result.t
+    state_values = result.y
+
+    error = surface_L_error(r_values, state_values)
+    return (r_values, state_values, error) if return_star else error
+
+
+def solve_bvp(T_c,
+              rho_c_guess=100 * g / cm ** 3, confidence=0.9,
+              rho_c_min=0.3 * g / cm ** 3, rho_c_max=4e6 * g / cm ** 3,
+              high_accuracy_threshold=1 * kg / m ** 3, rho_c_tol=1e-5 * kg / m ** 3,
+              max_rtol=1e-6, min_rtol=1e-9,
+              max_optical_depth_threshold=1e-3, min_optical_depth_threshold=1e-4):
+    """
+    Solves for the structure of a star with the given central temperature using the point and shoot method.
+
+    This uses the bisection algorithm, with a modification based on confidence. The higher the confidence, the quicker
+    convergence will be to rho_c_guess. Once rho_c_guess falls outside the interval of interest,
+    simple bisection is used. Too low of a confidence will cause this to reduce to simple bisection, and too high of a
+    confidence will likely cause rho_c_guess to fall outside the range of interest too fast leaving an unnecessarily
+    large remaining search space.
+
+    This algorithm adaptively increases the trial solution integration accuracy. The low accuracy one is used
+    initially until high_accuracy_threshold is reached. Then integration accuracy is increase logarithmically
+    proportionally as the range of considered central density values converges to within rho_c_tol. Both the rtol and
+    optical_depth_thresholds are improved from their max to their min provided values.
+
+    :param T_c: The central temperature.
+    :param rho_c_guess: A guess for the central density.
+    :param confidence: The confidence of the guess. Must be between 0.5 (no confidence) and 1 (perfect confidence).
+    :param rho_c_min: The minimum possible central density.
+    :param rho_c_max: The maximum possible central density.
+    :param high_accuracy_threshold: The value below which the range of rho_c values must drop below before switching to
+    :param rho_c_tol: The tolerance within which the central density must be determined for integration to end.
+                                    high accuracy mode. Defaults to 100 * rho_c_tol.
+    :param max_rtol: The starting rtol to use.
+    :param min_rtol: The rtol will gradually improve up to this value as the solution converges.
+    :param max_optical_depth_threshold: The starting optical_depth_threshold to use.
+    :param min_optical_depth_threshold: The optical_depth_threshold will gradually improve up to this value
+                                        as the solution converges.
+    :return: The resulting r_values and state_values of the converged stellar solution.
+    """
+    if confidence < 0.5:
+        raise Exception("Confidence must be at least 0.5!")
+    if confidence >= 1:
+        raise Exception("Confidence must be less than 1!")
+
+    # The rtol and optical_depth_threshold values used will be logarithmically interpolated between
+    # the min and max as the solution converges
+    def get_args(rho_c_range):
+        rtol = 10 ** np.interp(np.log10(rho_c_range),
+                               np.log10([rho_c_tol, high_accuracy_threshold]),
+                               np.log10([min_rtol, max_rtol]))
+        optical_depth_threshold = 10 ** np.interp(np.log10(rho_c_range),
+                                                  np.log10([rho_c_tol, 1]),
+                                                  np.log10([min_optical_depth_threshold, max_optical_depth_threshold]))
+        return dict(rtol=rtol, optical_depth_threshold=optical_depth_threshold)
+
+    y_guess = trial_solution(rho_c_guess, T_c, rtol=min_rtol, optical_depth_threshold=min_optical_depth_threshold)
+    if y_guess == 0:
+        return rho_c_guess
+
+    y0 = trial_solution(rho_c_min, T_c, rtol=max_rtol, optical_depth_threshold=max_optical_depth_threshold)
+    if y0 == 0:
+        return rho_c_min
+    if y0 < 0 < y_guess:
+        rho_c_low, rho_c_high = rho_c_min, rho_c_guess
+        bias_high = True
+        bias_low = False
+    elif y_guess < 0 < y0:
+        rho_c_low, rho_c_high = rho_c_guess, rho_c_min
+        bias_low = True
+        bias_high = False
+    else:
+        y1 = trial_solution(rho_c_max, T_c, rtol=max_rtol, optical_depth_threshold=max_optical_depth_threshold)
+        if y1 == 0:
+            return rho_c_max
+        if y1 < 0 < y_guess:
+            rho_c_low, rho_c_high = rho_c_max, rho_c_guess
+            bias_high = True
+            bias_low = False
+        elif y_guess < 0 < y1:
+            rho_c_low, rho_c_high = rho_c_guess, rho_c_max
+            bias_low = True
+            bias_high = False
+        else:
+            raise Exception("Bracketed endpoints must have opposite signs!")
+
+    while np.abs(rho_c_high - rho_c_low) / 2 > rho_c_tol:
+        # Calculate the rtol and optical_depth_threshold values to use for this iteration
+        args = get_args(np.abs(rho_c_high - rho_c_low) / 2)
+
+        if bias_low:
+            rho_c_guess = confidence * rho_c_low + (1 - confidence) * rho_c_high
+            y_guess = trial_solution(rho_c_guess, T_c, **args)
+            if y_guess == 0:
+                return rho_c_guess
+            if y_guess < 0:
+                rho_c_low = rho_c_guess
+                bias_low = False  # ignore initial guess bias now that it is no longer the low endpoint
+            elif y_guess > 0:
+                rho_c_high = rho_c_guess
+        elif bias_high:
+            rho_c_guess = (1 - confidence) * rho_c_low + confidence * rho_c_high
+            y_guess = trial_solution(rho_c_guess, T_c, **args)
+            if y_guess == 0:
+                return rho_c_guess
+            if y_guess < 0:
+                rho_c_low = rho_c_guess
+            elif y_guess > 0:
+                rho_c_high = rho_c_guess
+                bias_high = False  # ignore initial guess bias now that it is no longer the high endpoint
+        else:
+            rho_c_guess = (rho_c_low + rho_c_high) / 2
+            y_guess = trial_solution(rho_c_guess, T_c, **args)
+            if y_guess == 0:
+                return rho_c_guess
+            if y_guess < 0:
+                rho_c_low = rho_c_guess
+            elif y_guess > 0:
+                rho_c_high = rho_c_guess
+
+    # Generate and return final star
+    rho_c = (rho_c_high + rho_c_low) / 2
+    r_values, state_values, error = trial_solution(rho_c, T_c, return_star=True, rtol=min_rtol,
+                                                   optical_depth_threshold=min_optical_depth_threshold)
+    # r_values, state_values = truncate_star(r_values, state_values)
+    return r_values, state_values
+
+# OLD CODE
+
+
+def get_state_derivative_rk4(r, state, delta_r, return_kappa=False):
+    """
+    Estimates the elementwise derivative of the state vector using the 4th order Runge-Kutta method.
+    This will provide a more accurate estimate of the average derivative of the state vector between r and r + delta_r.
+
+    :param r: The current radius.
+    :param state: The state vector at the given radius.
+    :param delta_r: The size of the step in the radius.
+    :param return_kappa: If set to True, then the opacity will be returned as the second item of a tuple.
+    :return: The elementwise derivative of the state vector, and optionally the optical depth as well.
+    """
+    state_prime_0, kappa_0 = get_state_derivative(r, state, return_kappa=True)
+    state_prime_1, kappa_1 = get_state_derivative(r + delta_r / 2, state + state_prime_0 * delta_r / 2,
+                                                  return_kappa=True)
+    state_prime_2, kappa_2 = get_state_derivative(r + delta_r / 2, state + state_prime_1 * delta_r / 2,
+                                                  return_kappa=True)
+    state_prime_3, kappa_3 = get_state_derivative(r + delta_r, state + state_prime_2 * delta_r, return_kappa=True)
+
+    state_prime_rk4 = (state_prime_0 + 2 * state_prime_1 + 2 * state_prime_2 + state_prime_3) / 6
+    if not return_kappa:
+        return state_prime_rk4
+
+    kappa_rk4 = (kappa_0 + 2 * kappa_1 + 2 * kappa_2 + kappa_3) / 6
+    return state_prime_rk4, kappa_rk4
+
+
+def trial_solution_manual(rho_c, T_c, delta_r, r_0=None, optical_depth_threshold=1e-4):
     """
     Integrates the state of the star from r_0 until the estimated optical depth is below the given threshold.
     The array of radius values and the state matrix are returned along with the fractional surface luminosity error.
@@ -172,47 +364,3 @@ def trial_solution(rho_c, T_c, delta_r, r_0=None, optical_depth_threshold=1e-4):
 
     error = surface_L_error(r_values, state_values)
     return r_values, state_values, error
-
-
-# noinspection PyUnresolvedReferences
-def trial_solution_rk45(rho_c, T_c, r_0=100 * m,
-                        return_star=False, optical_depth_threshold=1e-4, mass_threshold=1000 * M_sun):
-    """
-    Integrates the state of the star from r_0 until the estimated optical depth is below the given threshold.
-    The array of radius values and the state matrix are returned along with the fractional surface luminosity error.
-
-    :param rho_c: The central density.
-    :param T_c: The central temperature.
-    :param r_0: The starting value of the radius. Must be greater than 0 to prevent numerical instabilities.
-                Defaults to 100m.
-    :param return_star: If True, then the radius values and state matrix will be returned alongside
-                        the fractional surface luminosity error.
-    :param optical_depth_threshold: The value below which the estimated remaining optical depth
-                                    must drop for the integration to terminate.
-    :param mass_threshold: If the mass of the star increases beyond this value, then integration will be halted.
-    :returns: The fractional surface luminosity error, and optionally the array of radius values and the state matrix
-    """
-    # Event based end condition
-    def halt_integration(r, state):
-        if state[M_index] > mass_threshold:
-            return -1
-        return get_remaining_optical_depth(r, state) - optical_depth_threshold
-    halt_integration.terminal = True
-
-    # Ending radius is infinity, integration will only be halted via the halt_integration event
-    # Not sure what good values for atol and rtol are, but these seem to work well
-    result = integrate.solve_ivp(get_state_derivative, (r_0, np.inf), get_initial_conditions(rho_c, T_c, r_0=r_0),
-                                 events=halt_integration, atol=1e-12, rtol=1e-9)
-    r_values = result.t
-    state_matrix = result.y
-
-    error = surface_L_error(r_values, state_matrix)
-    return (r_values, state_matrix, error) if return_star else error
-
-
-def solve_numerically(T_c, rho_c_guess=100 * g / cm ** 3, error_threshold=1e-6):
-    result = optimize.root_scalar(trial_solution_rk45, args=(T_c,), method='bisect',
-                                  bracket=(0.3 * g / cm ** 3, 500 * g / cm ** 3), x0=rho_c_guess, xtol=error_threshold)
-    rho_c = result.root
-    r_values, state_matrix, error = trial_solution_rk45(rho_c, T_c, return_star=True)
-    return r_values, state_matrix
