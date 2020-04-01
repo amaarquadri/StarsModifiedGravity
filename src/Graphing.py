@@ -13,11 +13,8 @@ from src.ExampleStar import ex_r_index, ex_rho_index, ex_T_index, ex_M_index, ex
 
 
 def graph_star(r_values, state_values, name="Sun", reference_data=None):
-    tau_infinity = state_values[tau_index, -1]
-    surface_index = find_zeros_index(tau_infinity - state_values[tau_index] - 2 / 3)
-
-    surface_r = interpolate(r_values, surface_index)
-    surface_state = interpolate(state_values, surface_index)
+    surface_r = r_values[-1]
+    surface_state = state_values[:, -1]
     rho_c = state_values[rho_index, 0]
     T_c = state_values[T_index, 0]
     surface_M = surface_state[M_index]
@@ -27,27 +24,24 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     print("Central Density:", rho_c / (g / cm ** 3), r"$\frac{g}{cm^3}$")
     print("Central Temperature:", T_c / million_K, "million K")
     print("Radius:", surface_r / R_sun, r"$R_{sun}$")
-    print("Mass:", state_values[M_index, -1] / M_sun, r"$M_{sun}$")
+    print("Mass:", surface_M / M_sun, r"$M_{sun}$")
     print("Luminosity:", surface_L / L_sun, r"$L_{sun}$")
     print("Surface Temperature:", surface_T / K, "K")
 
-    surface_index = int(surface_index)
-    r_graph_values = r_values[:surface_index] / surface_r
+    r_graph_values = r_values / surface_r
 
     # Compute convective regions
-    kappa_total_values = kappa(state_values[rho_index, :surface_index], state_values[T_index, :surface_index])
-    convective_regions = get_convective_regions(r_values[:surface_index], state_values[:, :surface_index],
-                                                surface_r, kappa_total_values)
+    kappa_total_values = kappa(state_values[rho_index, :], state_values[T_index, :])
+    convective_regions = get_convective_regions(r_values, state_values, surface_r, kappa_total_values)
 
     def mark_convective():
         for a, b in convective_regions:
-            plt.axvspan(a, b, facecolor='gray', alpha=0.5)
+            plt.axvspan(a, b, facecolor='gray', alpha=0.2)
 
-
-    plt.plot(r_graph_values, state_values[rho_index, :surface_index] / rho_c, label=r"$\rho$", color="black")
-    plt.plot(r_graph_values, state_values[T_index, :surface_index] / T_c, label="T", color="red")
-    plt.plot(r_graph_values, state_values[M_index, :surface_index] / surface_M, label="M", color="green")
-    plt.plot(r_graph_values, state_values[L_index, :surface_index] / surface_L, label="L", color="blue")
+    plt.plot(r_graph_values, state_values[rho_index, :] / rho_c, label=r"$\rho$", color="black")
+    plt.plot(r_graph_values, state_values[T_index, :] / T_c, label="T", color="red")
+    plt.plot(r_graph_values, state_values[M_index, :] / surface_M, label="M", color="green")
+    plt.plot(r_graph_values, state_values[L_index, :] / surface_L, label="L", color="blue")
     mark_convective()
     if reference_data is not None:
         r_ref_values = reference_data[ex_r_index, :] / surface_r
@@ -69,9 +63,9 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.savefig("../Graphs/" + name + "_properties.png")
     plt.clf()
 
-    P_degeneracy_values = P_degeneracy(state_values[rho_index, :surface_index])
-    P_gas_values = P_gas(state_values[rho_index, :surface_index], state_values[T_index, :surface_index])
-    P_photon_values = P_photon(state_values[T_index, :surface_index])
+    P_degeneracy_values = P_degeneracy(state_values[rho_index, :])
+    P_gas_values = P_gas(state_values[rho_index, :], state_values[T_index, :])
+    P_photon_values = P_photon(state_values[T_index, :])
     P_total_values = P_degeneracy_values + P_gas_values + P_photon_values
     P_max = P_total_values[0]
     plt.plot(r_graph_values, P_total_values / P_max, label=r"$P_{total}$", color="black")
@@ -100,8 +94,8 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.clf()
 
     kappa_es_values = kappa_es() * np.ones(len(r_graph_values))
-    kappa_ff_values = kappa_ff(state_values[rho_index, :surface_index], state_values[T_index, :surface_index])
-    kappa_H_minus_values = kappa_H_minus(state_values[rho_index, :surface_index], state_values[T_index, :surface_index])
+    kappa_ff_values = kappa_ff(state_values[rho_index, :], state_values[T_index, :])
+    kappa_H_minus_values = kappa_H_minus(state_values[rho_index, :], state_values[T_index, :])
     plt.plot(r_graph_values, np.log10(kappa_total_values / (cm ** 2 / g)), label=r"$\kappa_{total}$", color="black")
     plt.plot(r_graph_values, np.log10(kappa_es_values / (cm ** 2 / g)), label=r"$\kappa_{es}$", color="blue")
     plt.plot(r_graph_values, np.log10(kappa_ff_values / (cm ** 2 / g)), label=r"$\kappa_{ff}$", color="green")
@@ -125,11 +119,11 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.savefig("../Graphs/" + name + "_opacity.png")
     plt.clf()
 
-    L_proton_proton_prime_values = L_proton_proton_prime(r_values[:surface_index],
-                                                         state_values[rho_index, :surface_index],
-                                                         state_values[T_index, :surface_index])
-    L_CNO_prime_values = L_CNO_prime(r_values[:surface_index], state_values[rho_index, :surface_index],
-                                     state_values[T_index, :surface_index])
+    L_proton_proton_prime_values = L_proton_proton_prime(r_values,
+                                                         state_values[rho_index, :],
+                                                         state_values[T_index, :])
+    L_CNO_prime_values = L_CNO_prime(r_values, state_values[rho_index, :],
+                                     state_values[T_index, :])
     L_total_prime = L_proton_proton_prime_values + L_CNO_prime_values
     plt.plot(r_graph_values, L_total_prime / surface_L * surface_r, label=r"$\frac{L}{dr}$", color="black")
     plt.plot(r_graph_values, L_proton_proton_prime_values / surface_L * surface_r,
@@ -155,7 +149,7 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.clf()
 
     log_P_values = np.log(P_total_values)
-    log_T_values = np.log(state_values[T_index, :surface_index])
+    log_T_values = np.log(state_values[T_index, :])
     dlogP_dlogT_values = np.diff(log_P_values) / np.diff(log_T_values)
     # Omit last r_graph_value since taking first difference decreases array size by 1
     plt.plot(r_graph_values[:-1], dlogP_dlogT_values, label="calculated", color="black")
@@ -173,7 +167,7 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
 
 def get_convective_regions(r_values, state_values, surface_r, kappa_values=None):
     kappa_total_values = kappa(state_values[rho_index, :], state_values[T_index, :])
-    convective = is_convective(r_values[:], state_values[rho_index, :],
+    convective = is_convective(r_values, state_values[rho_index, :],
                                state_values[T_index, :], state_values[M_index, :],
                                state_values[L_index, :], kappa_value=kappa_total_values)
     indices = iter(np.concatenate(([0], np.argwhere(np.diff(convective))[:, 0], [len(convective) - 1])))

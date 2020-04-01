@@ -112,6 +112,8 @@ def truncate_star(r_values, state_values):
     surface_state = interpolate(state_values, surface_index)
 
     # manually set surface temperature to satisfy boundary condition
+    surface_state[M_index] = state_values[M_index, -1]
+    surface_state[L_index] = state_values[L_index, -1]
     surface_state[T_index] = (surface_state[L_index] / (4 * pi * surface_r ** 2 * sigma)) ** (1 / 4)
 
     surface_index = int(surface_index)
@@ -282,7 +284,7 @@ def solve_bvp(T_c,
     rho_c = (rho_c_high + rho_c_low) / 2
     r_values, state_values, error = trial_solution(rho_c, T_c, return_star=True, rtol=min_rtol,
                                                    optical_depth_threshold=min_optical_depth_threshold)
-    # r_values, state_values = truncate_star(r_values, state_values)
+    r_values, state_values = truncate_star(r_values, state_values)
     return r_values, state_values
 
 # OLD CODE

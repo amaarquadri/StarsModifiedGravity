@@ -1,39 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from Units import K, g, cm, million_K, M_sun, L_sun, R_sun
-from Utils import find_zeros_index, interpolate
-from StellarStructureEquations import L_proton_proton_prime, L_CNO_prime, P_degeneracy, P_gas, P_photon,\
-    kappa, kappa_es, kappa_ff, kappa_H_minus
-from NumericalIntegration import rho_index, T_index, M_index, L_index, tau_index, solve_numerically
-from ExampleStar import ex_r_index, ex_rho_index, ex_T_index, ex_M_index, ex_L_index, \
-    ex_P_index, ex_P_degeneracy_index, ex_P_gas_index, ex_P_photon_index, \
-    ex_kappa_index, ex_kappa_es_index, ex_kappa_ff_index, ex_kappa_H_minus_index, \
-    ex_L_prime_index, ex_L_proton_proton_prime_index, ex_L_CNO_prime_index, \
-    ex_dlog_P_by_dlog_T_index
+
+from src.NumericalIntegration import rho_index, T_index, L_index, solve_bvp
+from src.Units import g, cm, million_K
 
 '''
 Module to generate an HR Plot
 '''
 
-def get_luminosity(r_values, state_values):
-    '''
-    '''
-
-    tau_infinity = state_values[tau_index, -1]
-    surface_index = find_zeros_index(tau_infinity - state_values[tau_index] - 2 / 3)
-
-    surface_state = interpolate(state_values, surface_index)
-    surface_L = surface_state[L_index]
-    surface_T = surface_state[T_index]
-
-    L_surf = surface_L/L_sun
-    T_surf = surface_T/K
-    
-    return T_surf, L_surf
 
 def hr_plot(temp_data, lumin_data):
-    '''
-    '''
+    """
+    """
 
     # insert data here
     xdata = np.array(temp_data)
@@ -98,7 +76,7 @@ def hr_plot(temp_data, lumin_data):
     ax2.tick_params(axis='x', labelsize=0, labeltop=True)
     ax2.set_xscale("log")
     ax2.set_xlim((max_xlim, min_xlim))
-    ax2.plot() # keep empty
+    ax2.plot()  # keep empty
 
     all_annotations = [3e4, 17320, 8660, 6708, 5585, 4386, 2980]
     all_stellar_classes = ['O', 'B', 'A', 'F', 'G', 'K', 'M']
@@ -120,19 +98,22 @@ def hr_plot(temp_data, lumin_data):
         )
     plt.show()
 
+
 def generate_hr():
-    '''
-    '''
+    """
+    """
 
     num_space = np.linspace(0.01, 36, 5)
     core_temp_range = [int(num * million_K) for num in num_space]
 
     all_lumin = []
     all_temp = []
+    last_rho_c = 100 * g / cm ** 3
     for core_temp in core_temp_range:
         try:
-            r_values, state_values = solve_numerically(core_temp)
-            surf_temp, surf_lumin = get_luminosity(r_values, state_values)
+            r_values, state_values = solve_bvp(core_temp, last_rho_c)
+            last_rho_c = state_values[rho_index, 0]
+            surf_temp, surf_lumin = state_values[T_index, -1], state_values[L_index, -1]
 
             if surf_temp < 1e5: # anything above this is an outlier
                 all_lumin.append(surf_lumin)
