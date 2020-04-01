@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from src.Units import K, g, cm, million_K, M_sun, L_sun, R_sun
-from src.Utils import find_zeros_index, interpolate
 from src.StellarStructureEquations import L_proton_proton_prime, L_CNO_prime, P_degeneracy, P_gas, P_photon,\
     kappa, kappa_es, kappa_ff, kappa_H_minus, is_convective
 from src.NumericalIntegration import rho_index, T_index, M_index, L_index, tau_index
@@ -10,9 +9,13 @@ from src.ExampleStar import ex_r_index, ex_rho_index, ex_T_index, ex_M_index, ex
     ex_kappa_index, ex_kappa_es_index, ex_kappa_ff_index, ex_kappa_H_minus_index, \
     ex_L_prime_index, ex_L_proton_proton_prime_index, ex_L_CNO_prime_index, \
     ex_dlog_P_by_dlog_T_index
+from src.FileIO import get_timestamp
 
 
-def graph_star(r_values, state_values, name="Sun", reference_data=None):
+def graph_star(r_values, state_values, name=None, reference_data=None):
+    if name is None:
+        name = 'test_star_' + get_timestamp()
+
     surface_r = r_values[-1]
     surface_state = state_values[:, -1]
     rho_c = state_values[rho_index, 0]
@@ -165,8 +168,9 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.clf()
 
 
-def get_convective_regions(r_values, state_values, surface_r, kappa_values=None):
-    kappa_total_values = kappa(state_values[rho_index, :], state_values[T_index, :])
+def get_convective_regions(r_values, state_values, surface_r, kappa_total_values=None):
+    if kappa_total_values is None:
+        kappa_total_values = kappa(state_values[rho_index, :], state_values[T_index, :])
     convective = is_convective(r_values, state_values[rho_index, :],
                                state_values[T_index, :], state_values[M_index, :],
                                state_values[L_index, :], kappa_value=kappa_total_values)

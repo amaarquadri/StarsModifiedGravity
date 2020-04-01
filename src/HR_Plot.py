@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 from src.NumericalIntegration import rho_index, T_index, L_index, solve_bvp
 from src.Units import g, cm, million_K
+from src.StarSequenceGenerator import generate_stars, L_surface_index, T_surface_index
 
 '''
 Module to generate an HR Plot
@@ -68,7 +69,7 @@ def hr_plot(temp_data, lumin_data):
     ax1.set_yscale("log")
     ax1.plot(xdata, ydata, "o")
     ax1.set_xlim((max_xlim, min_xlim))
-    ax1.set_ylim(min_ylim, max_ylim)
+    # ax1.set_ylim(min_ylim, max_ylim)
 
     ax2 = ax1.twiny()
 
@@ -122,3 +123,8 @@ def generate_hr():
             print("'solve_numerically' didn't like Core Temp = {}.".format(core_temp))
 
     hr_plot(all_temp, all_lumin)
+
+
+if __name__ == '__main__':
+    stellar_data = generate_stars(np.linspace(0.01 * million_K, 36 * million_K, 20))
+    hr_plot(stellar_data[T_surface_index, :], stellar_data[L_surface_index, :])
