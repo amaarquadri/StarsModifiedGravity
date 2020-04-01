@@ -152,6 +152,7 @@ def trial_solution(rho_c, T_c, r_0=100 * m, rtol=1e-9, atol=None,
         if state[M_index] > mass_threshold:
             return -1
         return get_remaining_optical_depth(r, state) - optical_depth_threshold
+
     halt_integration.terminal = True
 
     # Ending radius is infinity, integration will only be halted via the halt_integration event
@@ -167,7 +168,7 @@ def trial_solution(rho_c, T_c, r_0=100 * m, rtol=1e-9, atol=None,
 
 def solve_bvp(T_c,
               rho_c_guess=100 * g / cm ** 3, confidence=0.9,
-              rho_c_min=0.3 * g / cm ** 3, rho_c_max=4e6 * g / cm ** 3,
+              rho_c_min=0.3 * g / cm ** 3, rho_c_max=4e9 * g / cm ** 3,
               high_accuracy_threshold=10 * kg / m ** 3, rho_c_tol=1e-7 * kg / m ** 3,
               max_rtol=1e-7, min_rtol=1e-10,
               max_optical_depth_threshold=1e-3, min_optical_depth_threshold=1e-4):
@@ -244,7 +245,12 @@ def solve_bvp(T_c,
             bias_low = True
             bias_high = False
         else:
-            raise Exception("Bracketed endpoints must have opposite signs!")
+            print("Retrying with larger rho_c interval for", T_c)
+            return solve_bvp(T_c, rho_c_guess, confidence=0.99, rho_c_min=rho_c_min, rho_c_max=rho_c_max,
+                             high_accuracy_threshold=high_accuracy_threshold, rho_c_tol=rho_c_tol,
+                             max_rtol=1000 * max_rtol, min_rtol=min_rtol / 1000,
+                             max_optical_depth_threshold=max_optical_depth_threshold,
+                             min_optical_depth_threshold=min_optical_depth_threshold)
 
     while np.abs(rho_c_high - rho_c_low) / 2 > rho_c_tol:
         # Calculate the rtol and optical_depth_threshold values to use for this iteration
@@ -284,10 +290,10 @@ def solve_bvp(T_c,
 
     # if solution failed to converge, recurse with greater accuracy
     if np.abs(y_guess) > 1000:
-        print('Retrying for ', T_c)
+        print('Retrying with higher accuracy for', T_c)
         return solve_bvp(T_c, rho_c, confidence=0.99, rho_c_min=rho_c_min, rho_c_max=rho_c_max,
                          high_accuracy_threshold=high_accuracy_threshold, rho_c_tol=rho_c_tol,
-                         max_rtol=max_rtol * 100, min_rtol=min_rtol*100,
+                         max_rtol=max_rtol * 100, min_rtol=min_rtol * 100,
                          max_optical_depth_threshold=max_optical_depth_threshold,
                          min_optical_depth_threshold=min_optical_depth_threshold)
 
@@ -296,6 +302,7 @@ def solve_bvp(T_c,
                                                    optical_depth_threshold=min_optical_depth_threshold)
     r_values, state_values = truncate_star(r_values, state_values)
     return r_values, state_values
+
 
 # OLD CODE
 
