@@ -7,6 +7,8 @@ from src.Constants import G, a, c, gamma, m_p, m_e, h_bar, k_b, kappa_es_coeffic
 X_default = 0.7
 Z_default = 0.031  # 0.034070001061466126  # 0.014
 Y_default = 1 - Z_default - X_default  # 0.274
+lambda_small = 0
+lambda_large = 0
 
 
 def rho_prime(r, rho, T, M, L, T_prime_value=None):
@@ -15,15 +17,16 @@ def rho_prime(r, rho, T, M, L, T_prime_value=None):
     """
     if T_prime_value is None:
         T_prime_value = T_prime(r, rho, T, M, L)
-    return -(G * M * rho / r ** 2 + dP_by_dT(rho, T) * T_prime_value) / dP_by_drho(rho, T)
+    return -(G * M * rho / r ** 2 * (1 + lambda_small / r) * (1 + r / lambda_large) +
+             dP_by_dT(rho, T) * T_prime_value) / dP_by_drho(rho, T)
 
 
 def T_prime(r, rho, T, M, L, kappa_value=None):
     if kappa_value is None:
         kappa_value = kappa(rho, T)
-    radiative = 3 * kappa_value * rho * L / (16 * pi * a * c * T ** 3 * r ** 2)
-    convective = (1 - 1 / gamma) * T * G * M * rho / (P(rho, T) * r ** 2)
-    return -np.minimum(radiative, convective)
+    radiative = T_prime_radiative(r, rho, T, L, kappa_value=kappa_value)
+    convective = T_prime_convective(r, rho, T, M)
+    return np.maximum(radiative, convective)
 
 
 def T_prime_radiative(r, rho, T, L, kappa_value=None):
@@ -33,7 +36,7 @@ def T_prime_radiative(r, rho, T, L, kappa_value=None):
 
 
 def T_prime_convective(r, rho, T, M):
-    return -(1 - 1 / gamma) * T * G * M * rho / (P(rho, T) * r ** 2)
+    return -(1 - 1 / gamma) * T * G * M * rho / (P(rho, T) * r ** 2) * (1 + lambda_small / r) * (1 + r / lambda_large)
 
 
 def is_convective(r, rho, T, M, L, kappa_value=None):
