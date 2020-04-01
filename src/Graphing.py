@@ -12,7 +12,7 @@ from src.ExampleStar import ex_r_index, ex_rho_index, ex_T_index, ex_M_index, ex
     ex_dlog_P_by_dlog_T_index
 
 
-def graph_star(r_values, state_values, name="Sun", reference_data=None):
+def graph_star(r_values, state_values, name="TestStar", reference_data=None):
     surface_r = r_values[-1]
     surface_state = state_values[:, -1]
     rho_c = state_values[rho_index, 0]
@@ -165,8 +165,9 @@ def graph_star(r_values, state_values, name="Sun", reference_data=None):
     plt.clf()
 
 
-def get_convective_regions(r_values, state_values, surface_r, kappa_values=None):
-    kappa_total_values = kappa(state_values[rho_index, :], state_values[T_index, :])
+def get_convective_regions(r_values, state_values, surface_r, kappa_total_values=None):
+    if kappa_total_values is None:
+        kappa_total_values = kappa(state_values[rho_index, :], state_values[T_index, :])
     convective = is_convective(r_values, state_values[rho_index, :],
                                state_values[T_index, :], state_values[M_index, :],
                                state_values[L_index, :], kappa_value=kappa_total_values)
