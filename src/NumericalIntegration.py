@@ -15,7 +15,7 @@ This will be a 5xN matrix, where N is the number of radius values.
 
 The indices are referenced using the following variables for readability.
 """
-rho_index, T_index, M_index, L_index, tau_index = 0, 1, 2, 3, 4
+rho_index, T_index, M_index, L_index, tau_index = np.arange(5)
 
 
 def get_initial_conditions(rho_c, T_c, r_0=1 * m):
@@ -168,8 +168,8 @@ def trial_solution(rho_c, T_c, r_0=100 * m, rtol=1e-9, atol=None,
 def solve_bvp(T_c,
               rho_c_guess=100 * g / cm ** 3, confidence=0.9,
               rho_c_min=0.3 * g / cm ** 3, rho_c_max=4e6 * g / cm ** 3,
-              high_accuracy_threshold=1 * kg / m ** 3, rho_c_tol=1e-5 * kg / m ** 3,
-              max_rtol=1e-6, min_rtol=1e-9,
+              high_accuracy_threshold=10 * kg / m ** 3, rho_c_tol=1e-7 * kg / m ** 3,
+              max_rtol=1e-7, min_rtol=1e-10,
               max_optical_depth_threshold=1e-3, min_optical_depth_threshold=1e-4):
     """
     Solves for the structure of a star with the given central temperature using the point and shoot method.
@@ -280,8 +280,18 @@ def solve_bvp(T_c,
             elif y_guess > 0:
                 rho_c_high = rho_c_guess
 
-    # Generate and return final star
     rho_c = (rho_c_high + rho_c_low) / 2
+
+    # if solution failed to converge, recurse with greater accuracy
+    if np.abs(y_guess) > 1000:
+        print('Retrying for ', T_c)
+        return solve_bvp(T_c, rho_c, confidence=0.99, rho_c_min=rho_c_min, rho_c_max=rho_c_max,
+                         high_accuracy_threshold=high_accuracy_threshold, rho_c_tol=rho_c_tol,
+                         max_rtol=max_rtol * 100, min_rtol=min_rtol*100,
+                         max_optical_depth_threshold=max_optical_depth_threshold,
+                         min_optical_depth_threshold=min_optical_depth_threshold)
+
+    # Generate and return final star
     r_values, state_values, error = trial_solution(rho_c, T_c, return_star=True, rtol=min_rtol,
                                                    optical_depth_threshold=min_optical_depth_threshold)
     r_values, state_values = truncate_star(r_values, state_values)
