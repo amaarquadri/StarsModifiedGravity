@@ -8,7 +8,7 @@ X_default = 0.7
 Z_default = 0.031  # 0.034070001061466126  # 0.014
 Y_default = 1 - Z_default - X_default  # 0.274
 lambda_small = 0
-lambda_large = 0
+lambda_large = np.inf
 
 
 def rho_prime(r, rho, T, M, L, T_prime_value=None):
