@@ -1,13 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from src.FileIO import get_timestamp, load_stellar_data
+from src.FileIO import get_timestamp, load_stellar_data, save_stellar_data
 from src.Units import L_sun, K, million_K, M_sun, R_sun
-from src.StarSequenceGenerator import T_surface_index, L_surface_index, generate_stars, M_surface_index, R_index
+from src.StarSequenceGenerator import T_surface_index, L_surface_index, generate_stars, M_surface_index, R_index, T_c_index
 
 
 def plot_sequence(stellar_data_lists, file_name=None):
     if file_name is None:
         file_name = 'test' + get_timestamp()
+
+    # Remove stars that didnt converge
+    stellar_data_lists = [(stellar_data[:, stellar_data[M_surface_index, :] < 1000 * M_sun], label)
+                          for stellar_data, label in stellar_data_lists]
+
     plot_HR(stellar_data_lists, file_name + '_HR')
     plot_LM(stellar_data_lists, file_name + '_LM')
     plot_RM(stellar_data_lists, file_name + '_RM')
@@ -55,7 +60,7 @@ def plot_RM(stellar_data_lists, file_name=None):
                     np.log10(stellar_data[R_index, :] / R_sun), label=label)
     if len(stellar_data_lists) > 1:
         plt.legend()
-    plt.title('LM Diagram')
+    plt.title('RM Diagram')
     plt.xlabel(r'$Log_{10}$ of Mass (Log Base 10 (M_\odot))')
     plt.ylabel(r'$Log_{10}$ of Radius (Log Base 10 (R_\odot))')
     plt.savefig('../Graphs/' + file_name + '.png')
@@ -64,12 +69,13 @@ def plot_RM(stellar_data_lists, file_name=None):
 
 if __name__ == '__main__':
     data_1 = load_stellar_data('standard_stellar_data')
-    data_2 = load_stellar_data(file_name='small_lambda_0.1R_sun')
-    data_3 = load_stellar_data(file_name='small_lambda_R_sun')
-    data_4 = load_stellar_data(file_name='small_lambda_-R_sun')
+    data_3 = load_stellar_data(file_name='small_lambda_1e8')
+    data_4 = load_stellar_data(file_name='small_lambda_4e8')
+    data_5 = load_stellar_data(file_name='small_lambda_1e9')
+    datasets = [(data_1, r'$\lambda$=0'),
+                (data_3, r'$\lambda$=1e8'),
+                (data_4, r'$\lambda$=4e8'),
+                (data_5, r'$\lambda$=1e9')
+                ]
     # data_5 = load_stellar_data(file_name='small_lambda_10R_sun')
-    datasets = [(data_1, 'standard'),
-                (data_2, r'$\lambda$=0.1$R_\odot$'),
-                (data_3, r'$\lambda$=$R_\odot$'),
-                (data_4, r'$\lambda$=-$R_\odot$')]
     plot_sequence(datasets, 'small_lambda')
