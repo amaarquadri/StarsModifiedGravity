@@ -3,6 +3,7 @@ from scipy import stats
 from src.Units import example_star_units
 from src.StellarStructureEquations import rho_prime, T_prime, M_prime, L_prime, P, P_degeneracy, P_gas, kappa, \
     T_prime_radiative, T_prime_convective
+from src.NumericalIntegration import rho_index, T_index, M_index, L_index
 
 _, ex_r_index, \
     ex_rho_index, ex_T_index, ex_M_index, ex_L_index, \
@@ -59,6 +60,15 @@ def test_stellar_structure_equations(file_name="../Example Stars/lowmass_star.tx
 
 def load_example_data(file_name="../Example Stars/lowmass_star.txt"):
     return np.loadtxt(file_name).T * example_star_units[:, None]
+
+
+def evaluate_star(r_values, state_matrix, reference_data):
+    errors = []
+    for val_index, ex_val_index in [(rho_index, ex_rho_index), (T_index, ex_T_index),
+                                    (M_index, ex_M_index), (L_index, ex_L_index)]:
+        errors.append(np.mean(np.abs(np.interp(reference_data[ex_r_index], r_values, state_matrix[val_index, :]) -
+                                     reference_data[ex_val_index, :])))
+    return np.sqrt(np.mean(np.array(errors) ** 2))
 
 
 if __name__ == '__main__':
