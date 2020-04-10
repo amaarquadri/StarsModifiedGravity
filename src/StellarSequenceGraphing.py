@@ -1,8 +1,9 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from src.FileIO import get_timestamp, load_stellar_data, save_stellar_data
-from src.Units import L_sun, K, million_K, M_sun, R_sun
-from src.StarSequenceGenerator import T_surface_index, L_surface_index, generate_stars, M_surface_index, R_index, T_c_index
+import numpy as np
+
+from src.FileIO import get_timestamp, load_stellar_data
+from src.StarSequenceGenerator import T_surface_index, L_surface_index, M_surface_index, R_index
+from src.Units import L_sun, K, M_sun, R_sun
 
 
 def plot_sequence(stellar_data_lists, file_name=None):
@@ -10,8 +11,8 @@ def plot_sequence(stellar_data_lists, file_name=None):
         file_name = 'test' + get_timestamp()
 
     # Remove stars that didnt converge
-    stellar_data_lists = [(stellar_data[:, stellar_data[M_surface_index, :] < 1000 * M_sun], label)
-                          for stellar_data, label in stellar_data_lists]
+    stellar_data_lists = [(stellar_data[:, stellar_data[M_surface_index, :] < 1000 * M_sun], config)
+                          for stellar_data, config in stellar_data_lists]
 
     plot_HR(stellar_data_lists, file_name + '_HR')
     plot_LM(stellar_data_lists, file_name + '_LM')
@@ -22,14 +23,15 @@ def plot_HR(stellar_data_lists, file_name=None):
     if file_name is None:
         file_name = 'HR_plot_' + get_timestamp()
 
-    for stellar_data, label in stellar_data_lists:
+    for stellar_data, config in stellar_data_lists:
+        label = config.describe_gravity_modifications() if config.has_gravity_modifications() else 'standard'
         plt.scatter(np.log10(stellar_data[T_surface_index, :] / K),
                     np.log10(stellar_data[L_surface_index, :] / L_sun), label=label)
     if len(stellar_data_lists) > 1:
         plt.legend()
     plt.title('HR Diagram')
-    plt.xlabel('Log Base 10 of Temperature (Log Base 10 (K))')
-    plt.ylabel('Log Base 10 of Luminosity (Log Base 10 (L_sun))')
+    plt.xlabel('$Log_{10}$ of Temperature ($Log_{10}$ (K))')
+    plt.ylabel(r'$Log_{10}$ of Luminosity ($Log_{10}$ ($L_{\odot}$))')
     plt.gca().invert_xaxis()
     plt.savefig('../Graphs/' + file_name + '.png')
     plt.clf()
@@ -39,14 +41,18 @@ def plot_LM(stellar_data_lists, file_name=None):
     if file_name is None:
         file_name = 'LM_plot_' + get_timestamp()
 
-    for stellar_data, label in stellar_data_lists:
+    for stellar_data, config in stellar_data_lists:
+        label = config.describe_gravity_modifications() if config.has_gravity_modifications() else 'standard'
         plt.scatter(np.log10(stellar_data[M_surface_index, :] / M_sun),
                     np.log10(stellar_data[L_surface_index, :] / L_sun), label=label)
+        line = np.polyfit(np.log10(stellar_data[M_surface_index, :] / M_sun),
+                          np.log10(stellar_data[L_surface_index, :] / L_sun), deg=1)
+        print('LM Line of best fit for', label, ': y=', line[0], '* x +', line[1])
     if len(stellar_data_lists) > 1:
         plt.legend()
     plt.title('LM Diagram')
-    plt.xlabel(r'$Log_{10}$ of Mass (Log Base 10 (M_\odot))')
-    plt.ylabel(r'$Log_{10}$ of Luminosity (Log Base 10 (L_\odot))')
+    plt.xlabel(r'$Log_{10}$ of Mass ($Log_{10}$ ($M_{\odot}$))')
+    plt.ylabel(r'$Log_{10}$ of Luminosity ($Log_{10}$ ($L_{\odot}$))')
     plt.savefig('../Graphs/' + file_name + '.png')
     plt.clf()
 
@@ -55,27 +61,23 @@ def plot_RM(stellar_data_lists, file_name=None):
     if file_name is None:
         file_name = 'RM_plot_' + get_timestamp()
 
-    for stellar_data, label in stellar_data_lists:
+    for stellar_data, config in stellar_data_lists:
+        label = config.describe_gravity_modifications() if config.has_gravity_modifications() else 'standard'
         plt.scatter(np.log10(stellar_data[M_surface_index, :] / M_sun),
                     np.log10(stellar_data[R_index, :] / R_sun), label=label)
+        line = np.polyfit(np.log10(stellar_data[M_surface_index, :] / M_sun),
+                          np.log10(stellar_data[R_index, :] / L_sun), deg=1)
+        print('RM Line of best fit for', label, ': y=', line[0], '* x +', line[1])
     if len(stellar_data_lists) > 1:
         plt.legend()
     plt.title('RM Diagram')
-    plt.xlabel(r'$Log_{10}$ of Mass (Log Base 10 (M_\odot))')
-    plt.ylabel(r'$Log_{10}$ of Radius (Log Base 10 (R_\odot))')
+    plt.xlabel(r'$Log_{10}$ of Mass ($Log_{10}$ ($M_{\odot}$))')
+    plt.ylabel(r'$Log_{10}$ of Radius ($Log_{10}$ ($R_{\odot}$))')
     plt.savefig('../Graphs/' + file_name + '.png')
     plt.clf()
 
 
 if __name__ == '__main__':
-    data_1 = load_stellar_data('standard_stellar_data')
-    data_3 = load_stellar_data(file_name='small_lambda_1e8')
-    data_4 = load_stellar_data(file_name='small_lambda_4e8')
-    data_5 = load_stellar_data(file_name='small_lambda_1e9')
-    datasets = [(data_1, r'$\lambda$=0'),
-                (data_3, r'$\lambda$=1e8'),
-                (data_4, r'$\lambda$=4e8'),
-                (data_5, r'$\lambda$=1e9')
-                ]
-    # data_5 = load_stellar_data(file_name='small_lambda_10R_sun')
-    plot_sequence(datasets, 'small_lambda')
+    file_names = ['standard_stellar_data']
+    dataset = [load_stellar_data(file_name=file_name, return_config=True) for file_name in file_names]
+    plot_sequence(dataset)
