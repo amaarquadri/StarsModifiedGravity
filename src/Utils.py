@@ -46,3 +46,10 @@ def print_state(radius, state, remaining_optical_depth=None):
           ", Luminosity: ", normalized_state[3],
           ", Optical Depth: ", normalized_state[4],
           ", Remaining Optical Depth: ", remaining_optical_depth if remaining_optical_depth is not None else 'Unknown')
+
+
+def to_excel(data):
+    """
+    Converts the given array into a string which can be pasted into an Excel column.
+    """
+    return ''.join(str(element) + '\n' for element in data)

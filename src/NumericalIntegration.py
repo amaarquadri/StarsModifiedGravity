@@ -242,6 +242,9 @@ def solve_bvp(T_c,
                 bias_high = False  # ignore initial guess bias now that it is no longer the high endpoint
         else:
             rho_c_guess = (rho_c_low + rho_c_high) / 2
+            if rho_c_guess == rho_c_low or rho_c_guess == rho_c_high:
+                print('break')
+                break
             y_guess = trial_solution(rho_c_guess, T_c, **args)
             if y_guess == 0:
                 return rho_c_guess
