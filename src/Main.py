@@ -10,8 +10,9 @@ from src.StarSequenceGenerator import generate_stars
 if __name__ == '__main__':
     reference_data = load_example_data(file_name='../Example Stars/highmass_star.txt')
     config = StellarConfiguration()
-    error, r_values, state_values = solve_bvp(24 * million_K,
-                                              rho_c_guess=100 * g / cm ** 3,
+    error, r_values, state_values = solve_bvp(20 * million_K,
+                                              rho_c_guess=80.063 * g / cm ** 3,
+                                              confidence=0.5,
                                               config=config)
     print('Error', error)
-    graph_star(r_values, state_values, 'high_mass2', config=config)
+    graph_star(r_values, state_values, 'high_mass', config=config, reference_data=reference_data)
