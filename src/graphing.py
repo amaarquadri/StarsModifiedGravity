@@ -1,14 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.ExampleStar import ex_r_index, ex_rho_index, ex_T_index, ex_M_index, ex_L_index, \
+from src.example_star import ex_r_index, ex_rho_index, ex_T_index, ex_M_index, ex_L_index, \
     ex_P_index, ex_P_degeneracy_index, ex_P_gas_index, ex_P_photon_index, \
     ex_kappa_index, ex_kappa_es_index, ex_kappa_ff_index, ex_kappa_H_minus_index, \
     ex_L_prime_index, ex_L_proton_proton_prime_index, ex_L_CNO_prime_index, \
     ex_dlog_P_by_dlog_T_index
-from src.FileIO import get_timestamp
-from src.StellarStructureEquations import StellarConfiguration, rho_index, T_index, M_index, L_index
-from src.Units import K, g, cm, million_K, M_sun, L_sun, R_sun
+from src.file_io import get_timestamp
+from src.stellar_structure_equations import StellarConfiguration, rho_index, T_index, M_index, L_index
+from src.units import K, g, cm, million_K, M_sun, L_sun, R_sun
 
 
 def graph_star(r_values, state_values, name=None, reference_data=None, config=StellarConfiguration()):

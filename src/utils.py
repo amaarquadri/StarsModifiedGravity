@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.interpolate import interp1d
-from src.Units import R_sun, state_vector_units
+from src.units import R_sun, state_vector_units
 
 
 def find_zeros_index(x, round_int=False, find_first=True):

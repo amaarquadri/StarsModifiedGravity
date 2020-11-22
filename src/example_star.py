@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import stats
-from src.Units import example_star_units
-from src.StellarStructureEquations import StellarConfiguration, rho_index, T_index, M_index, L_index
+from src.units import example_star_units
+from src.stellar_structure_equations import StellarConfiguration, rho_index, T_index, M_index, L_index
 
 _, ex_r_index, \
     ex_rho_index, ex_T_index, ex_M_index, ex_L_index, \
@@ -14,7 +14,7 @@ _, ex_r_index, \
     = np.arange(27)
 
 
-def test_stellar_structure_equations(file_name="../Example Stars/lowmass_star.txt", config=StellarConfiguration()):
+def test_stellar_structure_equations(file_name="../Example Stars/low_mass_star.txt", config=StellarConfiguration()):
     data = np.loadtxt(file_name).T * example_star_units[:, None]
 
     diff = config.T_prime_radiative(data[ex_r_index, :], data[ex_rho_index, :], data[ex_T_index, :],
@@ -58,7 +58,7 @@ def test_stellar_structure_equations(file_name="../Example Stars/lowmass_star.tx
     print("Kappa Percentage Error:", stats.describe((kappa_actual - kappa_expected) / kappa_expected))
 
 
-def load_example_data(file_name="../Example Stars/lowmass_star.txt"):
+def load_example_data(file_name="../Example Stars/low_mass_star.txt"):
     return np.loadtxt(file_name).T * example_star_units[:, None]
 
 

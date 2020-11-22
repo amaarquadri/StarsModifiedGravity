@@ -1,4 +1,4 @@
-from src.Units import kg, m, s, K, J, W
+from src.units import kg, m, s, K, J, W
 
 G = 6.67408e-11 * m ** 3 / (kg * s ** 2)
 sigma = 5.670374419e-8 * W / (m ** 2 * K ** 4)

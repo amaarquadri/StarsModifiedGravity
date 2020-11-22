@@ -1,10 +1,10 @@
 import numpy as np
 from numpy import pi
 from scipy import integrate
-from src.Units import m, kg, g, cm, M_sun
-from src.Constants import sigma
-from src.Utils import find_zeros_index, interpolate
-from src.StellarStructureEquations import StellarConfiguration, T_index, M_index, L_index, tau_index
+from src.units import m, kg, g, cm, M_sun
+from src.constants import sigma
+from src.utils import find_zeros_index, interpolate
+from src.stellar_structure_equations import StellarConfiguration, T_index, M_index, L_index, tau_index
 
 """
 The numerical integration is all done in vector form, where the vector of interest is (rho, T, M, L, tau).

@@ -1,8 +1,8 @@
 import numpy as np
 from numpy import pi
-from src.Constants import G, a, c, gamma, m_p, m_e, h_bar, k_b, kappa_es_coefficient, kappa_ff_coefficient, \
+from src.constants import G, a, c, gamma, m_p, m_e, h_bar, k_b, kappa_es_coefficient, kappa_ff_coefficient, \
     kappa_H_minus_coefficient, epsilon_proton_proton_coefficient, epsilon_CNO_coefficient
-from src.Units import m, R_sun
+from src.units import m, R_sun
 
 rho_index, T_index, M_index, L_index, tau_index = np.arange(5)
 X_default = 0.7

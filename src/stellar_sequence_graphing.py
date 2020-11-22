@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.FileIO import get_timestamp, load_stellar_data
-from src.StarSequenceGenerator import T_surface_index, L_surface_index, M_surface_index, R_index
-from src.Units import L_sun, K, M_sun, R_sun
+from src.file_io import get_timestamp, load_stellar_data
+from src.star_sequence_generator import T_surface_index, L_surface_index, M_surface_index, R_index
+from src.units import L_sun, K, M_sun, R_sun
 
 
 def plot_sequence(stellar_data_lists, file_name=None):
