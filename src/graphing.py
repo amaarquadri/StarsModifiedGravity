@@ -12,6 +12,14 @@ from src.units import K, g, cm, million_K, M_sun, L_sun, R_sun
 
 
 def graph_star(r_values, state_values, name=None, reference_data=None, config=StellarConfiguration()):
+    """
+
+    :param r_values: The radius values of this star.
+    :param state_values: The corresponding state matrix of this star.
+    :param name: The file name prefix for this star's graphs to be saved with.
+    :param reference_data: If provided, it will be graphed with dashed lines with the same scale as the stellar data.
+    :param config: The stellar configuration that was used to generate this star.
+    """
     if name is None:
         name = 'test_star_' + get_timestamp()
 
@@ -50,13 +58,13 @@ def graph_star(r_values, state_values, name=None, reference_data=None, config=St
     mark_convective_regions()
     if reference_data is not None:
         r_ref_values = reference_data[ex_r_index, :] / surface_r
-        plt.plot(r_ref_values, reference_data[ex_rho_index, :] / reference_data[ex_rho_index, 0],
+        plt.plot(r_ref_values, reference_data[ex_rho_index, :] / rho_c,
                  label=r"$\rho_{ref}$", color="black", linestyle='dashed')
-        plt.plot(r_ref_values, reference_data[ex_T_index, :] / reference_data[ex_T_index, 0],
+        plt.plot(r_ref_values, reference_data[ex_T_index, :] / T_c,
                  label=r"$T_{ref}$", color="red", linestyle='dashed')
-        plt.plot(r_ref_values, reference_data[ex_M_index, :] / reference_data[ex_M_index, -1],
+        plt.plot(r_ref_values, reference_data[ex_M_index, :] / surface_M,
                  label=r"$M_{ref}$", color="green", linestyle='dashed')
-        plt.plot(r_ref_values, reference_data[ex_L_index, :] / reference_data[ex_L_index, -1],
+        plt.plot(r_ref_values, reference_data[ex_L_index, :] / surface_L,
                  label=r"$L_{ref}$", color="blue", linestyle='dashed')
 
     plt.legend()
@@ -80,14 +88,13 @@ def graph_star(r_values, state_values, name=None, reference_data=None, config=St
     mark_convective_regions()
     if reference_data is not None:
         r_ref_values = reference_data[ex_r_index, :] / surface_r
-        P_ref_max = reference_data[ex_P_index, 0]
-        plt.plot(r_ref_values, reference_data[ex_P_index, :] / P_ref_max,
+        plt.plot(r_ref_values, reference_data[ex_P_index, :] / P_max,
                  label=r"$P_{total, ref}$", color="black", linestyle='dashed')
-        plt.plot(r_ref_values, reference_data[ex_P_degeneracy_index, :] / P_ref_max,
+        plt.plot(r_ref_values, reference_data[ex_P_degeneracy_index, :] / P_max,
                  label=r"$P_{deg, ref}$", color="red", linestyle='dashed')
-        plt.plot(r_ref_values, reference_data[ex_P_gas_index, :] / P_ref_max,
+        plt.plot(r_ref_values, reference_data[ex_P_gas_index, :] / P_max,
                  label=r"$P_{gas, ref}$", color="green", linestyle='dashed')
-        plt.plot(r_ref_values, reference_data[ex_P_photon_index, :] / P_ref_max,
+        plt.plot(r_ref_values, reference_data[ex_P_photon_index, :] / P_max,
                  label=r"$P_{photon, ref}$", color="blue", linestyle='dashed')
     plt.legend()
     plt.xlim(0, 1)
@@ -137,13 +144,11 @@ def graph_star(r_values, state_values, name=None, reference_data=None, config=St
     mark_convective_regions()
     if reference_data is not None:
         r_ref_values = reference_data[ex_r_index, :] / surface_r
-        ref_L_surface = reference_data[ex_L_index, -1]
-        ref_r_surface = reference_data[ex_r_index, -1]
-        plt.plot(r_ref_values, reference_data[ex_L_prime_index, :] / ref_L_surface * ref_r_surface,
+        plt.plot(r_ref_values, reference_data[ex_L_prime_index, :] / surface_L * surface_r,
                  label=r"$\frac{L_{ref}}{dr}$", color="black", linestyle="dashed")
-        plt.plot(r_ref_values, reference_data[ex_L_proton_proton_prime_index, :] / ref_L_surface * ref_r_surface,
+        plt.plot(r_ref_values, reference_data[ex_L_proton_proton_prime_index, :] / surface_L * surface_r,
                  label=r"$\frac{L_{proton-proton, ref}}{dr}$", color="red", linestyle="dashed")
-        plt.plot(r_ref_values, reference_data[ex_L_CNO_prime_index, :] / ref_L_surface * ref_r_surface,
+        plt.plot(r_ref_values, reference_data[ex_L_CNO_prime_index, :] / surface_L * surface_r,
                  label=r"$\frac{L_{CNO, ref}}{dr}$", color="blue", linestyle="dashed")
     plt.legend()
     plt.xlim(0, 1)
@@ -160,7 +165,8 @@ def graph_star(r_values, state_values, name=None, reference_data=None, config=St
     plt.plot(r_graph_values[:-2], dlogP_dlogT_values[:-1], label="calculated", color="black")
     mark_convective_regions()
     if reference_data is not None:
-        plt.plot(reference_data[ex_r_index, :] / surface_r, reference_data[ex_dlog_P_by_dlog_T_index, :],
+        r_ref_values = reference_data[ex_r_index, :] / surface_r
+        plt.plot(r_ref_values, reference_data[ex_dlog_P_by_dlog_T_index, :],
                  label="ref", color="black", linestyle="dashed")
     plt.xlim(0, 1)
     plt.xlabel(r"$r/R_{star}$")
