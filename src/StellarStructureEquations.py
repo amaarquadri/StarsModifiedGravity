@@ -141,12 +141,10 @@ class StellarConfiguration:
         return kappa_es_coefficient * (self.X + 1)
 
     def kappa_ff(self, rho, T):
-        return kappa_H_minus_coefficient * (self.Z / 0.02) * (rho / 10 ** 3) ** 0.5 * T ** 9
-        # return kappa_ff_coefficient * (self.Z + 0.0001) * (rho / 10 ** 3) ** 0.7 * T ** -3.5
+        return kappa_ff_coefficient * (self.Z + 0.0001) * (rho / 10 ** 3) ** 0.7 * T ** -3.5
 
     def kappa_H_minus(self, rho, T):
-        return kappa_ff_coefficient * (self.Z + 0.0001) * (rho / 10 ** 3) ** 0.7 * T ** -3.5
-        # return kappa_H_minus_coefficient * (self.Z / 0.02) * (rho / 10 ** 3) ** 0.5 * T ** 9
+        return kappa_H_minus_coefficient * (self.Z / 0.02) * (rho / 10 ** 3) ** 0.5 * T ** 9
 
     def epsilon(self, rho, T):
         return self.epsilon_proton_proton(rho, T) + self.epsilon_CNO(rho, T)
