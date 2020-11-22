@@ -156,9 +156,9 @@ def graph_star(r_values, state_values, name=None, reference_data=None, config=St
 
     log_P_values = np.log(P_total_values)
     log_T_values = np.log(state_values[T_index, :])
-    dlogP_dlogT_values = np.diff(log_P_values) / np.diff(log_T_values)
-    # Omit last r_graph_value since taking first difference decreases array size by 1
-    plt.plot(r_graph_values[:-1], dlogP_dlogT_values, label="calculated", color="black")
+    dlogP_dlogT_values = np.diff(log_P_values) / np.diff(log_T_values)  # can result in Nans
+    # Omit last 2 r_graph_values since taking first difference decreases array size by 1, and last point is unstable
+    plt.plot(r_graph_values[:-2], dlogP_dlogT_values[:-1], label="calculated", color="black")
     mark_convective_regions()
     if reference_data is not None:
         plt.plot(reference_data[ex_r_index, :] / surface_r, reference_data[ex_dlog_P_by_dlog_T_index, :],
