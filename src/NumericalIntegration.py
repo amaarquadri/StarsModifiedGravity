@@ -77,7 +77,6 @@ def truncate_star(r_values, state_values, return_star=False):
     return error, r_values, state_values
 
 
-# noinspection PyUnresolvedReferences
 def trial_solution(rho_c, T_c, r_0=100 * m, rtol=1e-9, atol=None,
                    return_star=False, optical_depth_threshold=1e-4, mass_threshold=1000 * M_sun,
                    config=StellarConfiguration()):
@@ -117,8 +116,8 @@ def trial_solution(rho_c, T_c, r_0=100 * m, rtol=1e-9, atol=None,
     result = integrate.solve_ivp(config.get_state_derivative, (r_0, np.inf),
                                  config.get_initial_conditions(rho_c, T_c, r_0=r_0),
                                  events=halt_integration, atol=atol, rtol=rtol)
-    r_values = result.t
-    state_values = result.y
+    # noinspection PyUnresolvedReferences
+    r_values, state_values = result.t, result.y
 
     return truncate_star(r_values, state_values, return_star=return_star)
 
@@ -126,9 +125,8 @@ def trial_solution(rho_c, T_c, r_0=100 * m, rtol=1e-9, atol=None,
 def solve_bvp(T_c,
               rho_c_guess=100 * g / cm ** 3, confidence=0.9,
               rho_c_min=0.3 * g / cm ** 3, rho_c_max=4e6 * g / cm ** 3,
-              high_accuracy_threshold=10 * kg / m ** 3, rho_c_tol=1e-20 * kg / m ** 3,
-              max_rtol=1e-11, min_rtol=1e-11,
-              max_optical_depth_threshold=1e-4, min_optical_depth_threshold=1e-4,
+              rho_c_tol=1e-20 * kg / m ** 3,
+              rtol=1e-11, optical_depth_threshold=1e-4,
               config=StellarConfiguration()):
     """
     Solves for the structure of a star with the given central temperature using the point and shoot method.
@@ -139,50 +137,28 @@ def solve_bvp(T_c,
     confidence will likely cause rho_c_guess to fall outside the range of interest too fast leaving an unnecessarily
     large remaining search space.
 
-    This algorithm adaptively increases the trial solution integration accuracy. Low accuracy is used
-    initially until high_accuracy_threshold is reached. Then integration accuracy is increase logarithmically
-    proportionally as the range of considered central density values converges to within rho_c_tol. Both the rtol and
-    optical_depth_thresholds are improved from their max to their min provided values.
-
     :param T_c: The central temperature.
     :param rho_c_guess: A guess for the central density.
     :param confidence: The confidence of the guess. Must be between 0.5 (no confidence) and 1 (perfect confidence).
     :param rho_c_min: The minimum possible central density.
     :param rho_c_max: The maximum possible central density.
-    :param high_accuracy_threshold: The value below which the range of rho_c values must drop below before switching to
-                                    high accuracy mode. Defaults to 100 * rho_c_tol.
     :param rho_c_tol: The tolerance within which the central density must be determined for integration to end.
-    :param max_rtol: The starting rtol to use.
-    :param min_rtol: The rtol will gradually improve up to this value as the solution converges.
-    :param max_optical_depth_threshold: The starting optical_depth_threshold to use.
-    :param min_optical_depth_threshold: The optical_depth_threshold will gradually improve up to this value
-                                        as the solution converges.
+    :param rtol: The rtol to use.
+    :param optical_depth_threshold: The optical_depth_threshold to use.
     :param config: The stellar configuration to use.
     :return: The resulting fractional luminosity error, r_values and state_values of the converged stellar solution.
     """
+    args = dict(T_c=T_c, rtol=rtol, optical_depth_threshold=optical_depth_threshold, config=config)
     if confidence < 0.5:
         raise Exception("Confidence must be at least 0.5!")
     if confidence >= 1:
         raise Exception("Confidence must be less than 1!")
 
-    # The rtol and optical_depth_threshold values used will be logarithmically interpolated between
-    # the min and max as the solution converges
-    def get_args(rho_c_range):
-        rtol = 10 ** np.interp(np.log10(rho_c_range),
-                               np.log10([rho_c_tol, high_accuracy_threshold]),
-                               np.log10([min_rtol, max_rtol]))
-        optical_depth_threshold = 10 ** np.interp(np.log10(rho_c_range),
-                                                  np.log10([rho_c_tol, 1]),
-                                                  np.log10([min_optical_depth_threshold, max_optical_depth_threshold]))
-        return dict(rtol=rtol, optical_depth_threshold=optical_depth_threshold, config=config)
-
-    y_guess = trial_solution(rho_c_guess, T_c, config=config,
-                             rtol=min_rtol, optical_depth_threshold=min_optical_depth_threshold)
+    y_guess = trial_solution(rho_c_guess, **args)
     if y_guess == 0:
         return rho_c_guess
 
-    y0 = trial_solution(rho_c_min, T_c,  config=config,
-                        rtol=max_rtol, optical_depth_threshold=max_optical_depth_threshold)
+    y0 = trial_solution(rho_c_min, **args)
     if y0 == 0:
         return rho_c_min
     if y0 < 0 < y_guess:
@@ -194,8 +170,7 @@ def solve_bvp(T_c,
         bias_low = True
         bias_high = False
     else:
-        y1 = trial_solution(rho_c_max, T_c,  config=config,
-                            rtol=max_rtol, optical_depth_threshold=max_optical_depth_threshold)
+        y1 = trial_solution(rho_c_max, **args)
         if y1 == 0:
             return rho_c_max
         if y1 < 0 < y_guess:
@@ -208,21 +183,21 @@ def solve_bvp(T_c,
             bias_high = False
         else:
             print("Retrying with larger rho_c interval for", T_c)
-            return solve_bvp(T_c, rho_c_guess, confidence=0.99,
+            # set confidence to be much higher since we know that the other boundary will be even further from the guess
+            return solve_bvp(T_c, rho_c_guess, confidence=(confidence + 4) / 5,
                              rho_c_min=rho_c_min / 1000, rho_c_max=1000 * rho_c_max,
-                             high_accuracy_threshold=high_accuracy_threshold, rho_c_tol=rho_c_tol,
-                             max_rtol=max_rtol, min_rtol=min_rtol,
-                             max_optical_depth_threshold=max_optical_depth_threshold,
-                             min_optical_depth_threshold=min_optical_depth_threshold,
+                             rho_c_tol=rho_c_tol,
+                             rtol=rtol,
+                             optical_depth_threshold=optical_depth_threshold,
                              config=config)
 
     while np.abs(rho_c_high - rho_c_low) / 2 > rho_c_tol:
-        # Calculate the rtol and optical_depth_threshold values to use for this iteration
-        args = get_args(np.abs(rho_c_high - rho_c_low) / 2)
-
         if bias_low:
             rho_c_guess = confidence * rho_c_low + (1 - confidence) * rho_c_high
-            y_guess = trial_solution(rho_c_guess, T_c, **args)
+            if rho_c_guess == rho_c_low or rho_c_guess == rho_c_high:
+                print('Reached limits of numerical precision for rho_c')
+                break
+            y_guess = trial_solution(rho_c_guess, **args)
             if y_guess == 0:
                 return rho_c_guess
             if y_guess < 0:
@@ -232,7 +207,10 @@ def solve_bvp(T_c,
                 rho_c_high = rho_c_guess
         elif bias_high:
             rho_c_guess = (1 - confidence) * rho_c_low + confidence * rho_c_high
-            y_guess = trial_solution(rho_c_guess, T_c, **args)
+            if rho_c_guess == rho_c_low or rho_c_guess == rho_c_high:
+                print('Reached limits of numerical precision for rho_c')
+                break
+            y_guess = trial_solution(rho_c_guess, **args)
             if y_guess == 0:
                 return rho_c_guess
             if y_guess < 0:
@@ -243,9 +221,9 @@ def solve_bvp(T_c,
         else:
             rho_c_guess = (rho_c_low + rho_c_high) / 2
             if rho_c_guess == rho_c_low or rho_c_guess == rho_c_high:
-                print('break')
+                print('Reached limits of numerical precision for rho_c')
                 break
-            y_guess = trial_solution(rho_c_guess, T_c, **args)
+            y_guess = trial_solution(rho_c_guess, **args)
             if y_guess == 0:
                 return rho_c_guess
             if y_guess < 0:
@@ -258,12 +236,12 @@ def solve_bvp(T_c,
     # if solution failed to converge, recurse with greater accuracy
     if np.abs(y_guess) > 1000:
         print('Retrying with higher accuracy for', T_c)
-        return solve_bvp(T_c, rho_c, confidence=0.99, rho_c_min=rho_c_min, rho_c_max=rho_c_max,
-                         high_accuracy_threshold=high_accuracy_threshold, rho_c_tol=rho_c_tol,
-                         max_rtol=max_rtol * 100, min_rtol=min_rtol * 100,
-                         max_optical_depth_threshold=max_optical_depth_threshold,
-                         min_optical_depth_threshold=min_optical_depth_threshold)
+        return solve_bvp(T_c, rho_c, confidence=0.99,  # confidence is extremely high now
+                         rho_c_min=rho_c_min, rho_c_max=rho_c_max,
+                         rho_c_tol=rho_c_tol,
+                         rtol=rtol * 100,
+                         optical_depth_threshold=optical_depth_threshold)
 
     # Generate and return final star
-    return trial_solution(rho_c, T_c, return_star=True, rtol=min_rtol,
-                          optical_depth_threshold=min_optical_depth_threshold)
+    return trial_solution(rho_c, T_c, return_star=True, rtol=rtol,
+                          optical_depth_threshold=optical_depth_threshold)
