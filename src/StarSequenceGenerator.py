@@ -35,13 +35,21 @@ def predict_rho_c(T_c, T_c_values, rho_c_values, degree=1):
 
 
 def get_aggregated_data(r_values, state_values):
+    """
+    Extracts the aggregated summary statistics about this star from its detailed data.
+
+    :param r_values: The radius values.
+    :param state_values: The state values.
+    :return: The aggregated summary statistics for this star.
+    """
     return np.array([r_values[-1], state_values[rho_index, 0], state_values[T_index, 0], state_values[M_index, -1],
                      state_values[L_index, -1], state_values[tau_index, -1], state_values[T_index, -1]])
 
 
 def calculate_stellar_data(T_c_values, config=StellarConfiguration()):
     """
-    Calculates aggregated stellar data using
+    Calculates aggregated stellar data for the given central temperature values.
+    This function does not use multiprocessing.
 
     :param T_c_values: The list of central Temperatures to calculate stellar data for.
     :param config: The stellar configuration to use.
@@ -64,6 +72,15 @@ def calculate_stellar_data(T_c_values, config=StellarConfiguration()):
 
 def generate_stars(T_c_values=np.linspace(4 * million_K, 40 * million_K, 20), config=StellarConfiguration(),
                    file_name=None, threads=4):
+    """
+    Generates and saves aggregated stellar data for the given list of central temperature values.
+
+    :param T_c_values: The central temperature values of the stars to generate.
+    :param config: The StellarConfiguration to use.
+    :param file_name: The file name to save the aggregated stellar data.
+    :param threads: The number of threads to use.
+    :return: The aggregated stellar data.
+    """
     if threads > 1:
         params = [(T_c_values[i * len(T_c_values) // threads:(i + 1) * len(T_c_values) // threads], config)
                   for i in range(threads)]
@@ -78,6 +95,14 @@ def generate_stars(T_c_values=np.linspace(4 * million_K, 40 * million_K, 20), co
 
 
 def test_rho_c_predictions(file_name='standard_stellar_data', degree=1):
+    """
+    Compares the predictions that would have been made for the central density to the actual values for the given
+    aggregated stellar data.
+
+    :param file_name: The file to load the aggregated stellar data from.
+    :param degree: The degree of the polynomial fit to apply.
+    :return: The mean percent error.
+    """
     stellar_data = load_stellar_data(file_name)
     T_c_vals = stellar_data[T_c_index, :]
     rho_c_vals = stellar_data[rho_c_index, :]
@@ -86,8 +111,10 @@ def test_rho_c_predictions(file_name='standard_stellar_data', degree=1):
         predictions.append(predict_rho_c(T_c_vals[i], T_c_vals[:i], rho_c_vals[:i], degree))
     errors = rho_c_vals[degree + 1:] - np.array(predictions)
     percent_errors = errors / rho_c_vals[degree + 1:]
-    print('Mean Error:', np.abs(np.mean(errors)) / (g / cm ** 3), 'g/cm^3')
-    print('Mean Percent Error:', np.abs(np.mean(percent_errors)))
+    mean_percent_error = np.mean(np.abs(percent_errors))
+    print('Mean Error:', np.mean(np.abs(errors)) / (g / cm ** 3), 'g/cm^3')
+    print('Mean Percent Error:', mean_percent_error)
+    return mean_percent_error
 
 
 if __name__ == '__main__':
