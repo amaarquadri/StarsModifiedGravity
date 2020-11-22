@@ -46,6 +46,13 @@ def load_star(file_name=None, return_config=False):
 
 
 def save_stellar_data(stellar_data, config, file_name=None):
+    """
+    Saves aggregated stellar data to the specified file.
+
+    :param stellar_data: The aggregated stellar data.
+    :param config: The stellar configuration that was used to generate the data.
+    :param file_name: The name of the file to save the stellar structure in.
+    """
     if file_name is None:
         file_name = 'stellar_data_pickle_' + get_timestamp()
     with open('../Stellar Data/' + file_name + '.pickle', 'wb') as pout:
