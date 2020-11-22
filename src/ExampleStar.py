@@ -1,8 +1,7 @@
 import numpy as np
 from scipy import stats
 from src.Units import example_star_units
-from src.StellarStructureEquations import StellarConfiguration
-from src.NumericalIntegration import rho_index, T_index, M_index, L_index
+from src.StellarStructureEquations import StellarConfiguration, rho_index, T_index, M_index, L_index
 
 _, ex_r_index, \
     ex_rho_index, ex_T_index, ex_M_index, ex_L_index, \

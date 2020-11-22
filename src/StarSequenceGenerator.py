@@ -1,9 +1,9 @@
 import numpy as np
 from multiprocessing import Pool
 from src.FileIO import save_stellar_data
-from src.NumericalIntegration import solve_bvp, rho_index, T_index, M_index, L_index, tau_index
+from src.NumericalIntegration import solve_bvp
 from src.Units import g, cm, million_K
-from src.StellarStructureEquations import StellarConfiguration
+from src.StellarStructureEquations import StellarConfiguration, rho_index, T_index, M_index, L_index, tau_index
 from src.FileIO import load_stellar_data
 
 

@@ -7,8 +7,7 @@ from src.ExampleStar import ex_r_index, ex_rho_index, ex_T_index, ex_M_index, ex
     ex_L_prime_index, ex_L_proton_proton_prime_index, ex_L_CNO_prime_index, \
     ex_dlog_P_by_dlog_T_index
 from src.FileIO import get_timestamp
-from src.NumericalIntegration import rho_index, T_index, M_index, L_index
-from src.StellarStructureEquations import StellarConfiguration
+from src.StellarStructureEquations import StellarConfiguration, rho_index, T_index, M_index, L_index
 from src.Units import K, g, cm, million_K, M_sun, L_sun, R_sun
 
 
