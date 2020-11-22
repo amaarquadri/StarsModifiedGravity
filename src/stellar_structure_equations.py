@@ -119,7 +119,7 @@ class StellarConfiguration:
     @staticmethod
     def P_degeneracy(rho):
         if rho < 0:
-            return 0
+            return 1e-10
         return (3 * pi ** 2) ** (2 / 3) * h_bar ** 2 / (5 * m_e) * (rho / m_p) ** (5 / 3)
 
     def P_gas(self, rho, T):
@@ -131,7 +131,7 @@ class StellarConfiguration:
 
     def dP_by_drho(self, rho, T):
         if rho < 0:
-            return 0
+            return 1e-10
         return (3 * pi ** 2) ** (2 / 3) * h_bar ** 2 / (3 * m_e * m_p) * (rho / m_p) ** (2 / 3) + k_b * T / (
                 self.mu() * m_p)
 
@@ -146,12 +146,12 @@ class StellarConfiguration:
 
     def kappa_ff(self, rho, T):
         if rho < 0:
-            return rho
+            return 1e-10
         return kappa_ff_coefficient * (self.Z + 0.0001) * (rho / 10 ** 3) ** 0.7 * T ** -3.5
 
     def kappa_H_minus(self, rho, T):
         if rho < 0:
-            return 0
+            return 1e-10
         return kappa_H_minus_coefficient * (self.Z / 0.02) * (rho / 10 ** 3) ** 0.5 * T ** 9
 
     def epsilon(self, rho, T):
